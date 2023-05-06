@@ -30,11 +30,11 @@
 // 3. This notice may not be removed or altered from any source
 //    distribution.
 
-// Include loadbmp.h as following
+// Include loadbmp.hpp as following
 // to create the implementation file.
 //
 // #define LOADBMP_IMPLEMENTATION
-// #include "loadbmp.h"
+// #include "loadbmp.hpp"
 
 #ifndef LOADBMP_H
 #define LOADBMP_H
@@ -62,22 +62,23 @@
 // The order is RGBRGBRGB..., from top left
 // to bottom right, without any padding.
 
-LOADBMP_API unsigned int loadbmp_to_framebuffer(
-    std::string filename, unsigned char *framebuffer, unsigned int width, unsigned int height, unsigned int stride);
+#include <string>
+
+LOADBMP_API unsigned int loadbmp_to_framebuffer(std::string filename, unsigned char *framebuffer, unsigned int width, unsigned int height, unsigned int stride);
 
 #ifdef LOADBMP_IMPLEMENTATION
 
-#include <stdio.h>  /* fopen(), fwrite(), fread(), fclose() */
-#include <stdlib.h> /* malloc(), free() */
-#include <string.h> /* memset(), memcpy() */
+#include <stdio.h>  /* fopen(), fread(), fclose() */
+#include <string.h> /* memset()*/
+
+#include <string>
 #include <vector>
 
-LOADBMP_API unsigned int loadbmp_to_framebuffer(
-    std::string filename, unsigned char *framebuffer, unsigned int width, unsigned int height, unsigned int stride) {
+LOADBMP_API unsigned int loadbmp_to_framebuffer(std::string filename, unsigned char *framebuffer, unsigned int width, unsigned int height,
+                                                unsigned int stride) {
     FILE *f = fopen(filename.c_str(), "rb");
 
-    if (!f)
-        return LOADBMP_FILE_NOT_FOUND;
+    if (!f) return LOADBMP_FILE_NOT_FOUND;
 
     unsigned char bmp_file_header[14];
     unsigned char bmp_info_header[40];
