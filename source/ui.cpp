@@ -142,15 +142,15 @@ void render() {
 bool pressed_exit() { return pressed_exit_button; }
 
 void draw_right_arrow(unsigned int x, unsigned int y, unsigned int scale) {
-    C2D_DrawTriangle(x - scale / 2, y + scale / 2, clrBlack, x - scale / 2, y - scale / 2, clrBlack, x + scale / 2, y, clrBlack, 0);
+    C2D_DrawTriangle(x - scale / 4 + 3, y + scale / 2, clrBlack, x - scale / 4 + 3, y - scale / 2, clrBlack, x + scale / 2, y, clrBlack, 0);
 }
 
 void draw_left_arrow(unsigned int x, unsigned int y, unsigned int scale) {
-    C2D_DrawTriangle(x + scale / 2, y + scale / 2, clrBlack, x + scale / 2, y - scale / 2, clrBlack, x - scale / 2, y, clrBlack, 0);
+    C2D_DrawTriangle(x + scale / 4 - 3, y + scale / 2, clrBlack, x + scale / 4 - 3, y - scale / 2, clrBlack, x - scale / 2, y, clrBlack, 0);
 }
 
 void draw_down_arrow(unsigned int x, unsigned int y, unsigned int scale) {
-    C2D_DrawTriangle(x + scale / 1.5, y - scale / 3, clrBlack, x - scale / 1.5, y - scale / 3, clrBlack, x, y + scale / 3, clrBlack, 0);
+    C2D_DrawTriangle(x + scale / 2, y - scale / 4, clrBlack, x - scale / 2 - 0.5, y - scale / 4, clrBlack, x, y + scale / 4, clrBlack, 0);
 }
 
 void draw_interface() {
@@ -229,13 +229,13 @@ void touchDownActions() {
 
     // Next page
     if (touchedInRect(touch, kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
-        selected_index = std::min(screenshots::size() - 1, (size_t)selected_index + kNCols * kNCols);
+        selected_index = get_page_index(std::min(screenshots::size() - 1, (size_t)selected_index + kNCols * kNCols));
         changed_selection = true;
     }
 
     // Previous page
     if (touchedInRect(touch, 0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
-        selected_index = std::max(0, selected_index - kNCols * kNRows);
+        selected_index = get_page_index(std::max(0, selected_index - kNCols * kNRows));
         changed_selection = true;
     }
 
