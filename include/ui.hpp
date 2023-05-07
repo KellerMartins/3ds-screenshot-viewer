@@ -27,6 +27,9 @@ constexpr int kNavbarHideButtonWidth = (kBottomScreenWidth - (kNavbarArrowWidth 
 constexpr int kNRows = ((kBottomScreenHeight - kNavbarHeight) / kThumbnailHeight);
 constexpr int kNCols = (kBottomScreenWidth / (kThumbnailWidth + kThumbnailSpacing));
 
+constexpr int kHMargin = (kBottomScreenWidth - kNCols * kThumbnailWidth - (kNCols - 1) * kThumbnailSpacing) / 2;
+constexpr int kVMargin = ((kBottomScreenHeight - kNavbarHeight) - kNRows * kThumbnailHeight - (kNRows - 1) * kThumbnailSpacing) / 2;
+
 constexpr int kSelectionOutline = 2;
 
 constexpr unsigned int kSelectionDebounceTicks = 20;
