@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     ui::init();
 
     screenshots::find();
-    screenshots::load_start();
+    screenshots::load_thumbnails_start();
 
     while (aptMainLoop()) {
         ui::input();
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
         ui::render();
     }
 
-    screenshots::load_stop();
+    screenshots::load_thumbnails_stop();
     ui::exit();
 
     return 0;

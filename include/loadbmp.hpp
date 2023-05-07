@@ -1,4 +1,4 @@
-// Code repurposed to load bmp to framebuffer. Original header below:
+// Code repurposed to load bmp to citro3D texture buffer. Original header below:
 
 // Author: Christian Vallentin <vallentin.source@gmail.com>
 // Website: http://vallentin.dev
@@ -58,13 +58,11 @@
 #define LOADBMP_API extern
 #endif
 
-// LoadBMP uses raw buffers and support RGB.
-// The order is RGBRGBRGB..., from top left
-// to bottom right, without any padding.
+#include <citro3d.h>
 
 #include <string>
 
-LOADBMP_API unsigned int loadbmp_to_framebuffer(std::string filename, unsigned char *framebuffer, unsigned int width, unsigned int height, unsigned int stride);
+LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, unsigned int width, unsigned int height, unsigned int stride = 1);
 
 #ifdef LOADBMP_IMPLEMENTATION
 
@@ -74,20 +72,17 @@ LOADBMP_API unsigned int loadbmp_to_framebuffer(std::string filename, unsigned c
 #include <string>
 #include <vector>
 
-LOADBMP_API unsigned int loadbmp_to_framebuffer(std::string filename, unsigned char *framebuffer, unsigned int width, unsigned int height,
-                                                unsigned int stride) {
+LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, unsigned int width, unsigned int height, unsigned int stride) {
     FILE *f = fopen(filename.c_str(), "rb");
 
     if (!f) return LOADBMP_FILE_NOT_FOUND;
 
-    unsigned char bmp_file_header[14];
-    unsigned char bmp_info_header[40];
+    u8 bmp_file_header[14];
+    u8 bmp_info_header[40];
 
     thread_local std::vector<char> bmp_img;
 
-    unsigned int w, h;
-
-    unsigned int x, y, i, j;
+    u32 w, h;
 
     memset(bmp_file_header, 0, sizeof(bmp_file_header));
     memset(bmp_info_header, 0, sizeof(bmp_info_header));
@@ -121,33 +116,23 @@ LOADBMP_API unsigned int loadbmp_to_framebuffer(std::string filename, unsigned c
 
     stride = stride ? stride : 1;
 
-    // Limit image to framebuffer size
-    w = w / stride > width ? width : w;
-    h = h / stride > height ? height : h;
+    u8 *buffer = reinterpret_cast<u8 *>(tex->data);
+    u32 buffer_width = tex->width;
 
-    if ((w > 0) && (h > 0)) {
-        j = 0;
-        for (y = 0; y < h; y++) {
-            if (y % stride == 0) {
-                for (x = 0; x < w / stride; x++) {
-                    i = (y / stride + x * h / stride) * 3;
+    for (u32 y = 0; y < height; y++) {
+        for (u32 x = 0; x < width; x++) {
+            u32 dst_pos = ((((y >> 3) * (buffer_width >> 3) + (x >> 3)) << 6) +
+                           ((x & 1) | ((y & 1) << 1) | ((x & 2) << 1) | ((y & 2) << 2) | ((x & 4) << 2) | ((y & 4) << 3))) *
+                          3;
+            u32 src_pos = ((h - y * stride - 1) * w + x * stride) * 3;
 
-                    (framebuffer + i)[0] = bmp_img[j++];
-                    (framebuffer + i)[1] = bmp_img[j++];
-                    (framebuffer + i)[2] = bmp_img[j++];
-
-                    if (stride > 1) {
-                        j += x == w / stride - 1 ? 3 * (w - 1 - x * stride) : 3 * (stride - 1);
-                    }
-                }
-            } else {
-                j += 3 * w;
-            }
-
-            // padding
-            // j += ((4 - (w * 3) % 4) % 4);
+            buffer[dst_pos] = bmp_img[src_pos];
+            buffer[dst_pos + 1] = bmp_img[src_pos + 1];
+            buffer[dst_pos + 2] = bmp_img[src_pos + 2];
         }
     }
+
+    C3D_TexFlush(tex);
 
     return LOADBMP_NO_ERROR;
 }

@@ -29,6 +29,8 @@ constexpr int kNCols = (kBottomScreenWidth / (kThumbnailWidth + kThumbnailSpacin
 
 constexpr int kSelectionOutline = 2;
 
+constexpr unsigned int kSelectionDebounceTicks = 20;
+
 void init();
 void exit();
 
