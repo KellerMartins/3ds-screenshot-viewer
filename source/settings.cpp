@@ -12,8 +12,11 @@ using json = nlohmann::json;
 
 namespace settings {
 
+const std::string app_folder_path = "/3ds/Screenshot-Viewer/";
+const std::string setings_path = app_folder_path + "settings.json";
+
+std::string tags_path = app_folder_path + "tags.json";
 std::string screenshots_path = "/luma/screenshots";
-std::string tags_path = "./tags.json";
 
 bool show_console = false;
 
@@ -29,6 +32,10 @@ void save() {
 
 void load() {
     json settings;
+
+    if (!std::filesystem::exists(app_folder_path)) {
+        std::filesystem::create_directories(app_folder_path);
+    }
 
     if (std::filesystem::exists(setings_path)) {
         std::ifstream f(setings_path);

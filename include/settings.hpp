@@ -1,8 +1,6 @@
 #include <string>
 
 namespace settings {
-constexpr std::string setings_path = "./settings.json";
-
 void save();
 void load();
 

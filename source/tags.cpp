@@ -49,6 +49,7 @@ void save() {
 
 void load() {
     json tags_data;
+
     const std::string tags_path = settings::get_tags_path();
     if (std::filesystem::exists(tags_path)) {
         std::ifstream f(tags_path);
