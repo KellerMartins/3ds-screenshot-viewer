@@ -8,6 +8,7 @@
 #include <loadbmp.hpp>
 
 #include "screenshots.hpp"
+#include "settings.hpp"
 
 #define STACKSIZE (4 * 1024)
 
@@ -51,7 +52,7 @@ void init() {
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
-    if (kShowConsole) consoleInit(GFX_TOP, NULL);
+    if (settings::get_show_console()) consoleInit(GFX_TOP, NULL);
 }
 
 void exit() {
@@ -159,12 +160,11 @@ void draw_interface() {
                       kThumbnailWidth + kSelectionOutline * 2, kThumbnailHeight + kSelectionOutline * 2, clrWhite);
 
     unsigned int i = get_selected_page();
-    std::cout << i << "\n";
     for (int r = 0; r < kNRows; r++) {
         for (int c = 0; c < kNCols; c++) {
             if (i >= screenshots::size()) break;
 
-            if (screenshots::get_info(i).hasThumbnail) {
+            if (screenshots::get_info(i).has_thumbnail) {
                 C2D_DrawImageAt(screenshots::get_info(i).thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c,
                                 kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, 0);
             } else {
@@ -197,7 +197,7 @@ void draw_bottom() {
 }
 
 void draw_top() {
-    if (kShowConsole) return;
+    if (settings::get_show_console()) return;
 
     gfxSet3D(selected_screenshot.is_3d);
 
@@ -225,17 +225,16 @@ void touchDownActions() {
 
     // Read the touch screen coordinates
     hidTouchRead(&touch);
-    std::cout << "TOUCH " << touch.px << " " << touch.py << "\n";
 
     // Next page
     if (touchedInRect(touch, kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
-        selected_index = get_page_index(std::min(screenshots::size() - 1, (size_t)selected_index + kNCols * kNCols));
+        selected_index = std::min(screenshots::size() - 1, (size_t)selected_index + kNCols * kNCols);
         changed_selection = true;
     }
 
     // Previous page
     if (touchedInRect(touch, 0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
-        selected_index = get_page_index(std::max(0, selected_index - kNCols * kNRows));
+        selected_index = std::max(0, selected_index - kNCols * kNRows);
         changed_selection = true;
     }
 
