@@ -36,21 +36,26 @@ RSF := $(TOPDIR)/$(RESOURCES)/template.rsf
 #---------------------------------------------------------------------------------
 # Build Setup (code generation)
 #---------------------------------------------------------------------------------
-ARCH := -march=armv6k -mtune=mpcore -mfloat-abi=hard
+ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
-COMMON_FLAGS := -g -Wall -Wno-strict-aliasing -O3 -mword-relocations -fomit-frame-pointer \
-	-ffast-math $(ARCH) $(INCLUDE) -D__3DS__ $(BUILD_FLAGS)
-CFLAGS := $(COMMON_FLAGS) -std=gnu99
-CXXFLAGS := $(COMMON_FLAGS) -std=gnu++11
-ifeq ($(ENABLE_EXCEPTIONS),)
-	CXXFLAGS += -fno-rtti -fno-exceptions
-endif
+CFLAGS	:=	-g -Wall -O2 -mword-relocations \
+			-ffunction-sections \
+			$(ARCH)
 
-ASFLAGS := -g $(ARCH)
-LDFLAGS = -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+CFLAGS	+=	$(INCLUDE) -D__3DS__
 
-LIBS := -lcitro2d -lcitro3d -lctru -lm
-LIBDIRS := $(PORTLIBS) $(CTRULIB) ./lib
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++2a
+
+ASFLAGS	:=	-g $(ARCH)
+LDFLAGS	=	-specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+
+LIBS	:= -lcitro2d -lcitro3d -lctru -lm
+
+#---------------------------------------------------------------------------------
+# list of directories containing libraries, this must be the top level containing
+# include and lib
+#---------------------------------------------------------------------------------
+LIBDIRS	:= $(CTRULIB)
 
 #---------------------------------------------------------------------------------
 ifneq ($(BUILD),$(notdir $(CURDIR)))
