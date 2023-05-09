@@ -12,11 +12,15 @@
 #include <bit>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 
 #include "loadbmp.hpp"
+#include "settings.hpp"
+#include "tags.hpp"
 #include "ui.hpp"
 
 namespace screenshots {
@@ -64,16 +68,16 @@ void threadThumbnails(void *arg) {
 
         unsigned int error =
             loadbmp_to_texture(screenshots[i].path_top, screenshots[i].thumbnail.tex, ui::kThumbnailWidth, ui::kThumbnailHeight, ui::kThumbnailDownscale);
-        screenshots[i].hasThumbnail = !error;
+        screenshots[i].has_thumbnail = !error;
 
         loaded_thumbs++;
     }
 }
 
-void find() {
-    auto files = std::vector<std::string>();
+void init() {
+    auto files = std::vector<std::filesystem::path>();
 
-    for (const auto &entry : std::filesystem::directory_iterator("/luma/screenshots")) files.push_back(entry.path());
+    for (const auto &entry : std::filesystem::directory_iterator(settings::get_screenshots_path())) files.push_back(entry.path());
 
     std::sort(files.begin(), files.end());
 
@@ -81,19 +85,15 @@ void find() {
         SCRS_TYPE type;
         std::string name;
 
+        std::string filename = files[i].filename().string();
         for (size_t s = 0; s < sizeof(suffixes) / sizeof(*suffixes); s++) {
-            if (files[i].ends_with(suffixes[s])) {
+            if (filename.ends_with(suffixes[s])) {
                 type = (SCRS_TYPE)s;
-                name = files[i].substr(0, files[i].size() - suffixes[s].size());
+                name = filename.substr(0, filename.size() - suffixes[s].size());
 
                 if (screenshots.size() == 0 || screenshots.back().name != name) {
-                    ScreenshotInfo newScreenshot;
-                    newScreenshot.name = name;
-                    newScreenshot.hasThumbnail = false;
-
                     std::cout << name << "\n";
-
-                    screenshots.push_back(newScreenshot);
+                    screenshots.push_back(ScreenshotInfo(name, tags::get_tag_ids(name)));
                 }
 
                 ScreenshotInfo &scrs = screenshots.back();

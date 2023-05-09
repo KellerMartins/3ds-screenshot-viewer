@@ -1,6 +1,4 @@
 namespace ui {
-constexpr bool kShowConsole = false;
-
 constexpr int kTopScreenWidth = 400;
 constexpr int kTopScreenHeight = 240;
 constexpr int kTopScreenSize = (kTopScreenWidth * kTopScreenHeight * 3);

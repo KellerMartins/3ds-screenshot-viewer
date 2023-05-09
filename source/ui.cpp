@@ -8,6 +8,7 @@
 #include <loadbmp.hpp>
 
 #include "screenshots.hpp"
+#include "settings.hpp"
 
 #define STACKSIZE (4 * 1024)
 
@@ -51,7 +52,7 @@ void init() {
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
-    if (kShowConsole) consoleInit(GFX_TOP, NULL);
+    if (settings::get_show_console()) consoleInit(GFX_TOP, NULL);
 }
 
 void exit() {
@@ -163,7 +164,7 @@ void draw_interface() {
         for (int c = 0; c < kNCols; c++) {
             if (i >= screenshots::size()) break;
 
-            if (screenshots::get_info(i).hasThumbnail) {
+            if (screenshots::get_info(i).has_thumbnail) {
                 C2D_DrawImageAt(screenshots::get_info(i).thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c,
                                 kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, 0);
             } else {
@@ -196,7 +197,7 @@ void draw_bottom() {
 }
 
 void draw_top() {
-    if (kShowConsole) return;
+    if (settings::get_show_console()) return;
 
     gfxSet3D(selected_screenshot.is_3d);
 

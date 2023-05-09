@@ -2,6 +2,7 @@
 #include <citro2d.h>
 
 #include <string>
+#include <vector>
 
 namespace screenshots {
 struct Screenshot {
@@ -13,14 +14,20 @@ struct Screenshot {
 
 struct ScreenshotInfo {
     std::string name;
+
     std::string path_top;
     std::string path_top_right;
     std::string path_bottom;
-    bool hasThumbnail;
+
+    std::vector<int>& tags;
+
+    bool has_thumbnail;
     C2D_Image thumbnail;
+
+    ScreenshotInfo(std::string name, std::vector<int>& tags) : name(name), tags(tags), has_thumbnail(false){};
 };
 
-void find();
+void init();
 void load_thumbnails_start();
 void load_thumbnails_stop();
 
