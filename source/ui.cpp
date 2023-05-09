@@ -159,7 +159,6 @@ void draw_interface() {
                       kThumbnailWidth + kSelectionOutline * 2, kThumbnailHeight + kSelectionOutline * 2, clrWhite);
 
     unsigned int i = get_selected_page();
-    std::cout << i << "\n";
     for (int r = 0; r < kNRows; r++) {
         for (int c = 0; c < kNCols; c++) {
             if (i >= screenshots::size()) break;
@@ -221,11 +220,9 @@ void touchDownActions() {
         return;
     }
 
-    touchPosition touch;
-
     // Read the touch screen coordinates
+    touchPosition touch;
     hidTouchRead(&touch);
-    std::cout << "TOUCH " << touch.px << " " << touch.py << "\n";
 
     // Next page
     if (touchedInRect(touch, kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
