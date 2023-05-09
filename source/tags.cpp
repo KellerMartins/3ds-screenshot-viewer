@@ -4,7 +4,6 @@
 
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -25,24 +24,29 @@ std::vector<u32> tag_colors = {
 std::vector<Tag> tags;
 std::map<std::string, std::vector<int>> screenshot_tags;
 
+std::string u32_to_hex_string(u32 x) {
+    std::stringstream stream;
+    stream << std::setfill('0') << std::setw(sizeof(u32) * 2) << std::hex << x;
+    return stream.str();
+}
+
+u32 u32_from_hex_string(std::string x) { return std::stoul(x, nullptr, 16); }
+
 void save() {
     json tags_json = json::array();
     for (Tag& tag : tags) {
-        tags_json.push_back(json({{"name", tag.name}, {"color", tag.color}, {"text_color", tag.text_color}}));
+        tags_json.push_back(json({{"name", tag.name}, {"color", u32_to_hex_string(tag.color)}, {"text_color", u32_to_hex_string(tag.text_color)}}));
     }
 
     json colors_json = json::array();
     for (u32& color : tag_colors) {
-        std::stringstream stream;
-        stream << std::setfill('0') << std::setw(sizeof(u32) * 2) << std::hex << color;
-        colors_json.push_back(stream.str());
+        colors_json.push_back(u32_to_hex_string(color));
     }
 
     std::ofstream f(settings::get_tags_path());
     f << "{\n"
       << "\"tags\": " << tags_json.dump() << ",\n"
       << "\"screenshot_tags\": " << json(screenshot_tags).dump() << ",\n"
-      << "\"colors\": " << colors_json.dump() << "\n"
       << "}\n";
     f.close();
 }
@@ -54,6 +58,28 @@ void load() {
     if (std::filesystem::exists(tags_path)) {
         std::ifstream f(tags_path);
         tags_data = json::parse(f);
+
+        screenshot_tags = tags_data["screenshot_tags"];
+
+        for (auto& tag : tags_data["tags"]) {
+            tags.push_back(Tag({
+                tag["name"],
+                u32_from_hex_string(tag["color"]),
+                u32_from_hex_string(tag["text_color"]),
+            }));
+        }
+
+        if (tags_data.contains("colors")) {
+            tag_colors.clear();
+
+            for (auto& item : tags_data["colors"]) {
+                std::string hex_color = item;
+                u32 color = u32_from_hex_string(hex_color);
+
+                tag_colors.push_back(color);
+            }
+        }
+
         f.close();
     } else {
         save();

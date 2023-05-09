@@ -2,7 +2,6 @@
 
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -41,6 +40,10 @@ void load() {
         std::ifstream f(setings_path);
         settings = json::parse(f);
         f.close();
+
+        screenshots_path = settings["screenshots_path"];
+        tags_path = settings["tags_path"];
+        show_console = settings["show_console"];
     } else {
         save();
     }
