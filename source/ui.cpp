@@ -229,13 +229,13 @@ void touchDownActions() {
 
     // Next page
     if (touchedInRect(touch, kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
-        selected_index = get_page_index(std::min(screenshots::size() - 1, (size_t)selected_index + kNCols * kNCols));
+        selected_index = std::min(screenshots::size() - 1, (size_t)selected_index + kNCols * kNCols);
         changed_selection = true;
     }
 
     // Previous page
     if (touchedInRect(touch, 0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
-        selected_index = get_page_index(std::max(0, selected_index - kNCols * kNRows));
+        selected_index = std::max(0, selected_index - kNCols * kNRows);
         changed_selection = true;
     }
 
