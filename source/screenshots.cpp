@@ -39,7 +39,7 @@ int loaded_thumbs = 0;
 volatile bool run_thread = true;
 Thread thumbnailThread;
 
-C2D_Image createImage(u16 width, u16 height) {
+C2D_Image CreateImage(u16 width, u16 height) {
     C3D_Tex *tex = new C3D_Tex;
     Tex3DS_SubTexture *subtex = new Tex3DS_SubTexture;
 
@@ -62,9 +62,9 @@ C2D_Image createImage(u16 width, u16 height) {
     return C2D_Image({tex, subtex});
 }
 
-void threadThumbnails(void *arg) {
+void ThreadThumbnails(void *arg) {
     for (size_t i = 0; i < screenshots.size() && run_thread; i++) {
-        screenshots[i].thumbnail = createImage(ui::kThumbnailWidth, ui::kThumbnailHeight);
+        screenshots[i].thumbnail = CreateImage(ui::kThumbnailWidth, ui::kThumbnailHeight);
 
         unsigned int error =
             loadbmp_to_texture(screenshots[i].path_top, screenshots[i].thumbnail.tex, ui::kThumbnailWidth, ui::kThumbnailHeight, ui::kThumbnailDownscale);
@@ -74,10 +74,10 @@ void threadThumbnails(void *arg) {
     }
 }
 
-void init() {
+void Init() {
     auto files = std::vector<std::filesystem::path>();
 
-    for (const auto &entry : std::filesystem::directory_iterator(settings::get_screenshots_path())) files.push_back(entry.path());
+    for (const auto &entry : std::filesystem::directory_iterator(settings::ScreenshotsPath())) files.push_back(entry.path());
 
     std::sort(files.begin(), files.end());
 
@@ -93,7 +93,7 @@ void init() {
 
                 if (screenshots.size() == 0 || screenshots.back().name != name) {
                     std::cout << name << "\n";
-                    screenshots.push_back(ScreenshotInfo(name, tags::get_tag_ids(name)));
+                    screenshots.push_back(ScreenshotInfo(name, tags::GetScreenshotTagIds(name)));
                 }
 
                 ScreenshotInfo &scrs = screenshots.back();
@@ -116,25 +116,25 @@ void init() {
 }
 
 #define STACKSIZE (4 * 1024)
-void load_thumbnails_start() {
+void LoadThumbnailsStart() {
     s32 prio = 0;
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
     run_thread = true;
-    thumbnailThread = threadCreate(threadThumbnails, nullptr, STACKSIZE, prio - 1, -2, false);
+    thumbnailThread = threadCreate(ThreadThumbnails, nullptr, STACKSIZE, prio - 1, -2, false);
 }
 
-void load_thumbnails_stop() {
+void LoadThumbnailsStop() {
     run_thread = false;
     threadJoin(thumbnailThread, U64_MAX);
     threadFree(thumbnailThread);
 }
 
-const Screenshot load(std::size_t index) {
+const Screenshot Load(std::size_t index) {
     static Screenshot screenshot = Screenshot({
         false,
-        createImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
-        createImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
-        createImage(ui::kBottomScreenWidth, ui::kBottomScreenHeight),
+        CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
+        CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
+        CreateImage(ui::kBottomScreenWidth, ui::kBottomScreenHeight),
     });
 
     unsigned int error;
@@ -163,8 +163,8 @@ const Screenshot load(std::size_t index) {
 
     return screenshot;
 }
-const ScreenshotInfo get_info(std::size_t index) { return screenshots[index]; }
-size_t size() { return screenshots.size(); }
-int num_loaded_thumbs() { return loaded_thumbs; }
+const ScreenshotInfo GetInfo(std::size_t index) { return screenshots[index]; }
+size_t Size() { return screenshots.size(); }
+int NumLoadedThumbnails() { return loaded_thumbs; }
 
 }  // namespace screenshots

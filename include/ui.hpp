@@ -25,17 +25,22 @@ enum TargetScreen {
     BOTTOM,
 };
 
-void init();
-void exit();
+void Init();
+void Exit();
+
+void Input();
+void Render();
+void SetUiFunctions(void (*input_fn)(), void (*render_fn)(bool));
+
+void ClearTargetScreen(TargetScreen screen, u32 clear_color = C2D_Color32(0x40, 0x40, 0x40, 0xFF));
+bool SetTargetScreen(TargetScreen screen);
 
 void input();
 void render();
 
-void set_ui_functions(void (*input_fn)(), void (*render_fn)());
-bool set_target_screen(TargetScreen screen);
-void clear_target_screen(TargetScreen screen, u32 clear_color = C2D_Color32(0x40, 0x40, 0x40, 0xFF));
+bool TouchedInRect(touchPosition touch, int x, int y, int w, int h);
 
-bool pressed_exit();
+bool PressedExit();
 }  // namespace ui
 
-#endif
+#endif  // UI_HPP_

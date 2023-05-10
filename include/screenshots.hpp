@@ -27,18 +27,18 @@ struct ScreenshotInfo {
     bool has_thumbnail;
     C2D_Image thumbnail;
 
-    ScreenshotInfo(std::string name, std::vector<int>& tags) : name(name), tags(tags), has_thumbnail(false){};
+    ScreenshotInfo(std::string name, std::vector<int>& tags) : name(name), tags(tags), has_thumbnail(false) {}
 };
 
-void init();
-void load_thumbnails_start();
-void load_thumbnails_stop();
+void Init();
+void LoadThumbnailsStart();
+void LoadThumbnailsStop();
 
-const screenshots::Screenshot load(std::size_t index);
-const ScreenshotInfo get_info(std::size_t index);
-size_t size();
-int num_loaded_thumbs();
+const screenshots::Screenshot Load(std::size_t index);
+const ScreenshotInfo GetInfo(std::size_t index);
+size_t Size();
+int NumLoadedThumbnails();
 
 }  // namespace screenshots
 
-#endif
+#endif  // SCREENSHOTS_HPP_

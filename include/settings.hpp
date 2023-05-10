@@ -4,12 +4,12 @@
 #include <string>
 
 namespace settings {
-void save();
-void load();
+void Save();
+void Load();
 
-const std::string get_screenshots_path();
-const std::string get_tags_path();
-const bool get_show_console();
+const std::string ScreenshotsPath();
+const std::string TagsPath();
+const bool ShowConsole();
 }  // namespace settings
 
-#endif
+#endif  // SETTINGS_HPP_

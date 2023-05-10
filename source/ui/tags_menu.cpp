@@ -11,22 +11,28 @@ const u32 clrOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x7F);
 
 bool has_rendered;
 
-void open() {
+void Show() {
     has_rendered = false;
-    set_ui_functions(input, render);
+    SetUiFunctions(Input, Render);
 }
 
-void input() {
+void Input() {
     if (keysDown() & KEY_SELECT) {
-        viewer::open();
+        viewer::Show();
     }
 }
-void render() {
-    if (has_rendered) return;
+void Render(bool force) {
+    if (!force && has_rendered) return;
 
-    set_target_screen(TargetScreen::BOTTOM);
+    viewer::Render(true);
 
+    SetTargetScreen(TargetScreen::BOTTOM);
     C2D_DrawRectSolid(0, 0, 0, kBottomScreenWidth, kBottomScreenHeight, clrOverlay);
+    if (SetTargetScreen(TargetScreen::TOP)) {
+        C2D_DrawRectSolid(0, 0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
+        SetTargetScreen(TargetScreen::TOP_RIGHT);
+        C2D_DrawRectSolid(0, 0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
+    }
 
     has_rendered = true;
 }

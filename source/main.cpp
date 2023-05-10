@@ -9,23 +9,23 @@
 #include "ui.hpp"
 
 int main(int argc, char **argv) {
-    settings::load();
-    tags::load();
+    settings::Load();
+    tags::Load();
 
-    ui::init();
-    screenshots::init();
+    ui::Init();
+    screenshots::Init();
 
-    screenshots::load_thumbnails_start();
+    screenshots::LoadThumbnailsStart();
 
     while (aptMainLoop()) {
-        ui::input();
-        if (ui::pressed_exit()) break;
+        ui::Input();
+        if (ui::PressedExit()) break;
 
-        ui::render();
+        ui::Render();
     }
 
-    screenshots::load_thumbnails_stop();
-    ui::exit();
+    screenshots::LoadThumbnailsStop();
+    ui::Exit();
 
     return 0;
 }

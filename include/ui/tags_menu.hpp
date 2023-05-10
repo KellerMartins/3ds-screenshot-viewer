@@ -4,10 +4,10 @@
 #include "ui.hpp"
 
 namespace ui::tags_menu {
-void open();
+void Show();
 
-void input();
-void render();
+void Input();
+void Render(bool force);
 }  // namespace ui::tags_menu
 
-#endif
+#endif  // UI_TAGS_MENU_HPP_

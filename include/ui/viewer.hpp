@@ -4,10 +4,10 @@
 #include "ui.hpp"
 
 namespace ui::viewer {
-void open();
+void Show();
 
-void input();
-void render();
+void Input();
+void Render(bool force);
 }  // namespace ui::viewer
 
-#endif
+#endif  // UI_VIEWER_HPP_

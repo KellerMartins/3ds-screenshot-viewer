@@ -42,20 +42,19 @@ bool is_3d = false;
 bool changed_selection = true;
 bool changed_screen = true;
 
-int get_page_index(int x) { return (((x) / (kNRows * kNCols)) * (kNRows * kNCols)); }
-int get_selected_page() { return get_page_index(selected_index); }
-int get_selected_screenshot_position() { return (selected_index - get_selected_page()); }
-void draw_bottom();
-void draw_top();
-void touchDownActions();
+int GetPageIndex(int x) { return (((x) / (kNRows * kNCols)) * (kNRows * kNCols)); }
+int GetSelectedPage() { return GetPageIndex(selected_index); }
+int GetSelectedScreenshotPosition() { return (selected_index - GetSelectedPage()); }
+void DrawBottom();
+void DrawTop();
+void TouchDownActions();
 
-void open() {
+void Show() {
     changed_screen = true;
+    SetUiFunctions(Input, Render);
+}
 
-    set_ui_functions(input, render);
-};
-
-void input() {
+void Input() {
     if (!keysDown()) {
         ticks_since_last_input = ticks_since_last_input < kSelectionDebounceTicks ? ticks_since_last_input + 1 : kSelectionDebounceTicks;
     } else {
@@ -63,7 +62,7 @@ void input() {
     }
 
     if (keysDown() & KEY_TOUCH) {
-        touchDownActions();
+        TouchDownActions();
         ticks_since_last_input = kSelectionDebounceTicks;  // Debounce is not used for touch actions
     }
 
@@ -73,27 +72,27 @@ void input() {
     }
 
     if (keysDown() & KEY_DRIGHT) {
-        selected_index = std::min(screenshots::size() - 1, (size_t)selected_index + 1);
+        selected_index = std::min(screenshots::Size() - 1, static_cast<size_t>(selected_index) + 1);
         changed_selection = true;
     }
 
-    if (keysDown() & KEY_DUP && get_selected_screenshot_position() - kNCols >= 0) {
+    if (keysDown() & KEY_DUP && GetSelectedScreenshotPosition() - kNCols >= 0) {
         selected_index -= kNCols;
         changed_selection = true;
     }
 
-    if (keysDown() & KEY_DDOWN && get_selected_screenshot_position() < kNRows * (kNCols - 1)) {
+    if (keysDown() & KEY_DDOWN && GetSelectedScreenshotPosition() < kNRows * (kNCols - 1)) {
         selected_index += kNCols;
         changed_selection = true;
     }
 
-    if (keysDown() & KEY_L && get_selected_page() > 0) {
+    if (keysDown() & KEY_L && GetSelectedPage() > 0) {
         selected_index = std::max(0, selected_index - kNCols * kNRows);
         changed_selection = true;
     }
 
-    if (keysDown() & KEY_R && get_selected_page() < get_page_index(screenshots::size() - 1)) {
-        selected_index = std::min(screenshots::size() - 1, (size_t)selected_index + kNCols * kNCols);
+    if (keysDown() & KEY_R && GetSelectedPage() < GetPageIndex(screenshots::Size() - 1)) {
+        selected_index = std::min(screenshots::Size() - 1, static_cast<size_t>(selected_index) + kNCols * kNCols);
         changed_selection = true;
     }
 
@@ -103,54 +102,54 @@ void input() {
     }
 
     if (keysDown() & KEY_SELECT) {
-        tags_menu::open();
+        tags_menu::Show();
     }
 
-    if (last_loaded_thumbs != screenshots::num_loaded_thumbs()) {
-        last_loaded_thumbs = screenshots::num_loaded_thumbs();
+    if (last_loaded_thumbs != screenshots::NumLoadedThumbnails()) {
+        last_loaded_thumbs = screenshots::NumLoadedThumbnails();
         if (show_ui) changed_screen = true;
     }
 
     if (changed_selection && ticks_since_last_input >= kSelectionDebounceTicks) {
-        selected_screenshot = screenshots::load(selected_index);
+        selected_screenshot = screenshots::Load(selected_index);
         changed_selection = false;
         changed_screen = true;
         ticks_since_last_input = 0;
     }
 }
-void render() {
-    if (changed_selection || changed_screen) {
-        draw_top();
-        draw_bottom();
+void Render(bool force) {
+    if (force || changed_selection || changed_screen) {
+        DrawTop();
+        DrawBottom();
     }
 
     changed_screen = false;
 }
 
-void draw_right_arrow(unsigned int x, unsigned int y, unsigned int scale) {
+void DrawRightArrow(unsigned int x, unsigned int y, unsigned int scale) {
     C2D_DrawTriangle(x - scale / 4 + 3, y + scale / 2, clrBlack, x - scale / 4 + 3, y - scale / 2, clrBlack, x + scale / 2, y, clrBlack, 0);
 }
 
-void draw_left_arrow(unsigned int x, unsigned int y, unsigned int scale) {
+void DrawLeftArrow(unsigned int x, unsigned int y, unsigned int scale) {
     C2D_DrawTriangle(x + scale / 4 - 3, y + scale / 2, clrBlack, x + scale / 4 - 3, y - scale / 2, clrBlack, x - scale / 2, y, clrBlack, 0);
 }
 
-void draw_down_arrow(unsigned int x, unsigned int y, unsigned int scale) {
+void DrawDownArrow(unsigned int x, unsigned int y, unsigned int scale) {
     C2D_DrawTriangle(x + scale / 2, y - scale / 4, clrBlack, x - scale / 2 - 0.5, y - scale / 4, clrBlack, x, y + scale / 4, clrBlack, 0);
 }
 
-void draw_interface() {
-    C2D_DrawRectSolid(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * ((get_selected_screenshot_position()) % kNCols) - kSelectionOutline,
-                      kVMargin + (kThumbnailHeight + kThumbnailSpacing) * ((int)((get_selected_screenshot_position()) / kNRows)) - kSelectionOutline, 0,
+void DrawInterface() {
+    C2D_DrawRectSolid(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * ((GetSelectedScreenshotPosition()) % kNCols) - kSelectionOutline,
+                      kVMargin + (kThumbnailHeight + kThumbnailSpacing) * (static_cast<int>((GetSelectedScreenshotPosition()) / kNRows)) - kSelectionOutline, 0,
                       kThumbnailWidth + kSelectionOutline * 2, kThumbnailHeight + kSelectionOutline * 2, clrWhite);
 
-    unsigned int i = get_selected_page();
+    unsigned int i = GetSelectedPage();
     for (int r = 0; r < kNRows; r++) {
         for (int c = 0; c < kNCols; c++) {
-            if (i >= screenshots::size()) break;
+            if (i >= screenshots::Size()) break;
 
-            if (screenshots::get_info(i).has_thumbnail) {
-                C2D_DrawImageAt(screenshots::get_info(i).thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c,
+            if (screenshots::GetInfo(i).has_thumbnail) {
+                C2D_DrawImageAt(screenshots::GetInfo(i).thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c,
                                 kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, 0);
             } else {
                 C2D_DrawRectSolid(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, 0,
@@ -165,41 +164,38 @@ void draw_interface() {
     C2D_DrawRectSolid(kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, 0, kNavbarArrowWidth, kNavbarHeight, clrGray);
     C2D_DrawRectSolid(kNavbarArrowWidth + kNavbarButtonsSpacing, kBottomScreenHeight - kNavbarHeight, 0, kNavbarHideButtonWidth, kNavbarHeight, clrGray);
 
-    draw_left_arrow(kNavbarIconMargin + kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
-    draw_right_arrow(kBottomScreenWidth - kNavbarIconMargin - kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
-
-    draw_down_arrow(kBottomScreenWidth / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
+    DrawLeftArrow(kNavbarIconMargin + kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
+    DrawRightArrow(kBottomScreenWidth - kNavbarIconMargin - kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
+    DrawDownArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
 }
 
-void draw_bottom() {
-    set_target_screen(TargetScreen::BOTTOM);
-    clear_target_screen(TargetScreen::BOTTOM);
+void DrawBottom() {
+    SetTargetScreen(TargetScreen::BOTTOM);
+    ClearTargetScreen(TargetScreen::BOTTOM);
 
     if (show_ui)
-        draw_interface();
+        DrawInterface();
     else
         C2D_DrawImageAt(selected_screenshot.bottom, 0, 0, 0);
 }
 
-void draw_top() {
-    if (!set_target_screen(TargetScreen::TOP)) return;
+void DrawTop() {
+    if (!SetTargetScreen(TargetScreen::TOP)) return;
 
-    clear_target_screen(TargetScreen::TOP);
+    ClearTargetScreen(TargetScreen::TOP);
     gfxSet3D(selected_screenshot.is_3d);
 
     C2D_DrawImageAt(selected_screenshot.top, 0, 0, 0);
 
     if (selected_screenshot.is_3d) {
-        set_target_screen(TargetScreen::TOP_RIGHT);
-        clear_target_screen(TargetScreen::TOP_RIGHT);
+        SetTargetScreen(TargetScreen::TOP_RIGHT);
+        ClearTargetScreen(TargetScreen::TOP_RIGHT);
 
         C2D_DrawImageAt(selected_screenshot.top_right, 0, 0, 0);
     }
 }
 
-bool touchedInRect(touchPosition touch, int x, int y, int w, int h) { return touch.px > x && touch.px < x + w && touch.py > y && touch.py < y + h; }
-
-void touchDownActions() {
+void TouchDownActions() {
     if (show_ui == false) {
         show_ui = true;
         changed_screen = true;
@@ -211,30 +207,30 @@ void touchDownActions() {
     hidTouchRead(&touch);
 
     // Next page
-    if (touchedInRect(touch, kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
-        selected_index = std::min(screenshots::size() - 1, (size_t)selected_index + kNCols * kNCols);
+    if (TouchedInRect(touch, kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
+        selected_index = std::min(screenshots::Size() - 1, static_cast<size_t>(selected_index) + kNCols * kNCols);
         changed_selection = true;
     }
 
     // Previous page
-    if (touchedInRect(touch, 0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
+    if (TouchedInRect(touch, 0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight)) {
         selected_index = std::max(0, selected_index - kNCols * kNRows);
         changed_selection = true;
     }
 
     // Hide UI
-    if (touchedInRect(touch, kNavbarArrowWidth + kNavbarButtonsSpacing, kBottomScreenHeight - kNavbarHeight, kNavbarHideButtonWidth, kNavbarHeight)) {
+    if (TouchedInRect(touch, kNavbarArrowWidth + kNavbarButtonsSpacing, kBottomScreenHeight - kNavbarHeight, kNavbarHideButtonWidth, kNavbarHeight)) {
         show_ui = false;
         changed_screen = true;
     }
 
     // Select screenshot
-    unsigned int i = get_selected_page();
+    unsigned int i = GetSelectedPage();
     for (int r = 0; r < kNRows; r++) {
         for (int c = 0; c < kNCols; c++) {
-            if (i >= screenshots::size()) break;
+            if (i >= screenshots::Size()) break;
 
-            if (touchedInRect(touch, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r,
+            if (TouchedInRect(touch, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r,
                               kThumbnailWidth, kThumbnailHeight)) {
                 selected_index = i;
                 changed_selection = true;

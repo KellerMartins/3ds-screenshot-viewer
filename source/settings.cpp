@@ -19,7 +19,7 @@ std::string screenshots_path = "/luma/screenshots";
 
 bool show_console = false;
 
-void save() {
+void Save() {
     std::ofstream f(setings_path);
     f << "{\n"
       << "\"screenshots_path\": \"" << screenshots_path << "\",\n"
@@ -29,7 +29,7 @@ void save() {
     f.close();
 }
 
-void load() {
+void Load() {
     json settings;
 
     if (!std::filesystem::exists(app_folder_path)) {
@@ -45,11 +45,11 @@ void load() {
         tags_path = settings["tags_path"];
         show_console = settings["show_console"];
     } else {
-        save();
+        Save();
     }
 }
 
-const std::string get_screenshots_path() { return screenshots_path; }
-const std::string get_tags_path() { return tags_path; }
-const bool get_show_console() { return show_console; }
+const std::string ScreenshotsPath() { return screenshots_path; }
+const std::string TagsPath() { return tags_path; }
+const bool ShowConsole() { return show_console; }
 }  // namespace settings

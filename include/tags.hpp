@@ -13,9 +13,9 @@ struct Tag {
     u32 text_color;
 };
 
-void load();
-void save();
-std::vector<int>& get_tag_ids(std::string screenshot_name);
+void Load();
+void Save();
+std::vector<int>& GetScreenshotTagIds(std::string screenshot_name);
 }  // namespace tags
 
-#endif
+#endif  // TAGS_HPP_
