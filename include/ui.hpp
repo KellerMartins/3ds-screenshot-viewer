@@ -1,3 +1,9 @@
+#ifndef UI_HPP_
+#define UI_HPP_
+
+#include <3ds.h>
+#include <citro2d.h>
+
 namespace ui {
 constexpr int kTopScreenWidth = 400;
 constexpr int kTopScreenHeight = 240;
@@ -9,28 +15,15 @@ constexpr int kBottomScreenSize = (kBottomScreenWidth * kBottomScreenHeight * 3)
 
 constexpr int kThumbnailDownscale = 4;
 
-constexpr int kThumbnailSpacing = 4;
 constexpr int kThumbnailWidth = (kTopScreenWidth / kThumbnailDownscale);
 constexpr int kThumbnailHeight = (kTopScreenHeight / kThumbnailDownscale);
 constexpr int kThumbnailSize = (kThumbnailWidth * kThumbnailHeight * 3);
 
-constexpr int kNavbarHeight = 24;
-constexpr int kNavbarArrowWidth = 64;
-constexpr int kNavbarButtonsSpacing = 1;
-constexpr int kNavbarIconMargin = 24;
-constexpr int kNavbarIconSpacing = 4;
-constexpr int kNavbarIconScale = (kNavbarHeight - kNavbarIconSpacing * 2);
-constexpr int kNavbarHideButtonWidth = (kBottomScreenWidth - (kNavbarArrowWidth + kNavbarButtonsSpacing) * 2);
-
-constexpr int kNRows = ((kBottomScreenHeight - kNavbarHeight) / kThumbnailHeight);
-constexpr int kNCols = (kBottomScreenWidth / (kThumbnailWidth + kThumbnailSpacing));
-
-constexpr int kHMargin = (kBottomScreenWidth - kNCols * kThumbnailWidth - (kNCols - 1) * kThumbnailSpacing) / 2;
-constexpr int kVMargin = ((kBottomScreenHeight - kNavbarHeight) - kNRows * kThumbnailHeight - (kNRows - 1) * kThumbnailSpacing) / 2;
-
-constexpr int kSelectionOutline = 2;
-
-constexpr unsigned int kSelectionDebounceTicks = 20;
+enum TargetScreen {
+    TOP,
+    TOP_RIGHT,
+    BOTTOM,
+};
 
 void init();
 void exit();
@@ -38,6 +31,11 @@ void exit();
 void input();
 void render();
 
-bool pressed_exit();
+void set_ui_functions(void (*input_fn)(), void (*render_fn)());
+bool set_target_screen(TargetScreen screen);
+void clear_target_screen(TargetScreen screen, u32 clear_color = C2D_Color32(0x40, 0x40, 0x40, 0xFF));
 
+bool pressed_exit();
 }  // namespace ui
+
+#endif

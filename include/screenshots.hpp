@@ -1,3 +1,6 @@
+#ifndef SCREENSHOTS_HPP_
+#define SCREENSHOTS_HPP_
+
 #include <3ds.h>
 #include <citro2d.h>
 
@@ -37,3 +40,5 @@ size_t size();
 int num_loaded_thumbs();
 
 }  // namespace screenshots
+
+#endif
