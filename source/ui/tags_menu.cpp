@@ -13,8 +13,9 @@
 namespace ui::tags_menu {
 
 const int kMenuWidth = 300;
-const int kMenuHeight = 207;
+const int kMenuHeight = 197;
 const int kMenuPositionY = kBottomScreenHeight - kMenuHeight;
+const int kMenuBorderRadius = 15;
 
 const int kButtonHeight = 24;
 const int kButtonSpacing = 1;
@@ -22,7 +23,7 @@ const int kButtonTextOffsetY = 3;
 const int kButtonArrowWidth = 64;
 const int kButtonArrowSize = 16;
 
-const int kTagsPositionY = kMenuPositionY + 10;
+const int kTagsPositionY = kMenuPositionY + 6;
 const int kTagHeight = 25;
 const int kTagPadding = kTagHeight / 2;
 const int kTagMargin = 2;
@@ -166,7 +167,14 @@ void Render(bool force) {
     // Menu overlay
     SetTargetScreen(TargetScreen::kBottom);
     DrawRect(0, 0, kBottomScreenWidth, kBottomScreenHeight, clrOverlay);
-    DrawRect((kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - kMenuHeight, kMenuWidth, kMenuHeight, clrBackground);
+    DrawRect((kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - kMenuHeight + kMenuBorderRadius, kMenuWidth, kMenuHeight - kMenuBorderRadius,
+             clrBackground);
+    DrawCircle((kBottomScreenWidth - kMenuWidth) / 2 + kMenuBorderRadius, kBottomScreenHeight - kMenuHeight + kMenuBorderRadius, kMenuBorderRadius,
+               clrBackground);
+    DrawCircle((kBottomScreenWidth - kMenuWidth) / 2 + kMenuWidth - kMenuBorderRadius, kBottomScreenHeight - kMenuHeight + kMenuBorderRadius, kMenuBorderRadius,
+               clrBackground);
+    DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kMenuBorderRadius, kBottomScreenHeight - kMenuHeight, kMenuWidth - kMenuBorderRadius * 2,
+             kMenuBorderRadius, clrBackground);
 
     // Tags
     float y = kTagsPositionY;
@@ -176,20 +184,23 @@ void Render(bool force) {
     }
 
     if (tag_rows.size() <= 7) {
+        // Action button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 2,
                  kButtonHeight, clrButtons);
         DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight + kButtonTextOffsetY, 0.5, clrBlack, "Add Tag");
     } else {
+        // Action button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kButtonArrowWidth, kButtonHeight,
                  row_offset > 0 ? clrButtons : clrButtonsDisabled);
         DrawRect(kBottomScreenWidth - ((kBottomScreenWidth - kMenuWidth) / 2) - kButtonArrowWidth - kButtonSpacing,
                  kBottomScreenHeight - kButtonHeight - kButtonSpacing, kButtonArrowWidth, kButtonHeight,
                  row_offset + kTagRows < tag_rows.size() ? clrButtons : clrButtonsDisabled);
 
-        DrawLeftArrow((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing + kButtonArrowWidth / 2, kBottomScreenHeight - kButtonHeight / 2,
-                      kButtonArrowSize);
+        // Navigation arrows
+        DrawLeftArrow((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing + kButtonArrowWidth / 2, kBottomScreenHeight - kButtonHeight / 2, kButtonArrowSize,
+                      row_offset > 0 ? clrBlack : clrBackground);
         DrawRightArrow(kBottomScreenWidth - ((kBottomScreenWidth - kMenuWidth) / 2) - kButtonArrowWidth / 2, kBottomScreenHeight - kButtonHeight / 2,
-                       kButtonArrowSize);
+                       kButtonArrowSize, row_offset + kTagRows < tag_rows.size() ? clrBlack : clrBackground);
 
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing * 2 + kButtonArrowWidth, kBottomScreenHeight - kButtonHeight - kButtonSpacing,
                  kMenuWidth - kButtonSpacing * 4 - kButtonArrowWidth * 2, kButtonHeight, clrButtons);

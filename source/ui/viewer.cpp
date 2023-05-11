@@ -103,7 +103,7 @@ void Input() {
         changed_screen = true;
     }
 
-    if (keysDown() & KEY_SELECT) {
+    if (keysDown() & KEY_SELECT || keysDown() & KEY_X) {
         tags_menu::Show();
     }
 
