@@ -14,7 +14,7 @@ const int kNavbarArrowWidth = 64;
 const int kNavbarButtonsSpacing = 1;
 const int kNavbarIconMargin = 24;
 const int kNavbarIconSpacing = 4;
-const int kNavbarIconScale = (kNavbarHeight - kNavbarIconSpacing * 2);
+const int kNavbarIconScale = 16;
 const int kNavbarHideButtonWidth = (kBottomScreenWidth - (kNavbarArrowWidth + kNavbarButtonsSpacing) * 2);
 
 const int kNRows = ((kBottomScreenHeight - kNavbarHeight) / kThumbnailHeight);
@@ -28,7 +28,7 @@ const int kSelectionOutline = 2;
 const unsigned int kSelectionDebounceTicks = 20;
 
 const u32 clrWhite = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
-const u32 clrGray = C2D_Color32(0x7F, 0x7F, 0x7F, 0xFF);
+const u32 clrButtons = C2D_Color32(0x7F, 0x7F, 0x7F, 0xFF);
 const u32 clrBlack = C2D_Color32(0x00, 0x00, 0x00, 0xFF);
 const u32 clrClear = C2D_Color32(0xFF, 0xD8, 0xB0, 0xFF);
 
@@ -96,7 +96,7 @@ void Input() {
         changed_selection = true;
     }
 
-    if (keysDown() & KEY_X) {
+    if (keysDown() & KEY_A) {
         show_ui = !show_ui;
         changed_screen = true;
     }
@@ -126,22 +126,14 @@ void Render(bool force) {
     changed_screen = false;
 }
 
-void DrawRightArrow(unsigned int x, unsigned int y, unsigned int scale) {
-    C2D_DrawTriangle(x - scale / 4 + 3, y + scale / 2, clrBlack, x - scale / 4 + 3, y - scale / 2, clrBlack, x + scale / 2, y, clrBlack, 0);
-}
-
-void DrawLeftArrow(unsigned int x, unsigned int y, unsigned int scale) {
-    C2D_DrawTriangle(x + scale / 4 - 3, y + scale / 2, clrBlack, x + scale / 4 - 3, y - scale / 2, clrBlack, x - scale / 2, y, clrBlack, 0);
-}
-
 void DrawDownArrow(unsigned int x, unsigned int y, unsigned int scale) {
     C2D_DrawTriangle(x + scale / 2, y - scale / 4, clrBlack, x - scale / 2 - 0.5, y - scale / 4, clrBlack, x, y + scale / 4, clrBlack, 0);
 }
 
 void DrawInterface() {
-    C2D_DrawRectSolid(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * ((GetSelectedScreenshotPosition()) % kNCols) - kSelectionOutline,
-                      kVMargin + (kThumbnailHeight + kThumbnailSpacing) * (static_cast<int>((GetSelectedScreenshotPosition()) / kNRows)) - kSelectionOutline, 0,
-                      kThumbnailWidth + kSelectionOutline * 2, kThumbnailHeight + kSelectionOutline * 2, clrWhite);
+    DrawRect(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * ((GetSelectedScreenshotPosition()) % kNCols) - kSelectionOutline,
+             kVMargin + (kThumbnailHeight + kThumbnailSpacing) * (static_cast<int>((GetSelectedScreenshotPosition()) / kNRows)) - kSelectionOutline,
+             kThumbnailWidth + kSelectionOutline * 2, kThumbnailHeight + kSelectionOutline * 2, clrWhite);
 
     unsigned int i = GetSelectedPage();
     for (int r = 0; r < kNRows; r++) {
@@ -152,17 +144,17 @@ void DrawInterface() {
                 C2D_DrawImageAt(screenshots::GetInfo(i).thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c,
                                 kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, 0);
             } else {
-                C2D_DrawRectSolid(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, 0,
-                                  kThumbnailWidth, kThumbnailHeight, clrGray);
+                DrawRect(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, kThumbnailWidth,
+                         kThumbnailHeight, clrButtons);
             }
 
             i++;
         }
     }
 
-    C2D_DrawRectSolid(0, kBottomScreenHeight - kNavbarHeight, 0, kNavbarArrowWidth, kNavbarHeight, clrGray);
-    C2D_DrawRectSolid(kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, 0, kNavbarArrowWidth, kNavbarHeight, clrGray);
-    C2D_DrawRectSolid(kNavbarArrowWidth + kNavbarButtonsSpacing, kBottomScreenHeight - kNavbarHeight, 0, kNavbarHideButtonWidth, kNavbarHeight, clrGray);
+    DrawRect(0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight, clrButtons);
+    DrawRect(kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight, clrButtons);
+    DrawRect(kNavbarArrowWidth + kNavbarButtonsSpacing, kBottomScreenHeight - kNavbarHeight, kNavbarHideButtonWidth, kNavbarHeight, clrButtons);
 
     DrawLeftArrow(kNavbarIconMargin + kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
     DrawRightArrow(kBottomScreenWidth - kNavbarIconMargin - kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
@@ -170,8 +162,8 @@ void DrawInterface() {
 }
 
 void DrawBottom() {
-    SetTargetScreen(TargetScreen::BOTTOM);
-    ClearTargetScreen(TargetScreen::BOTTOM);
+    SetTargetScreen(TargetScreen::kBottom);
+    ClearTargetScreen(TargetScreen::kBottom);
 
     if (show_ui)
         DrawInterface();
@@ -180,16 +172,16 @@ void DrawBottom() {
 }
 
 void DrawTop() {
-    if (!SetTargetScreen(TargetScreen::TOP)) return;
+    if (!SetTargetScreen(TargetScreen::kTop)) return;
 
-    ClearTargetScreen(TargetScreen::TOP);
+    ClearTargetScreen(TargetScreen::kTop);
     gfxSet3D(selected_screenshot.is_3d);
 
     C2D_DrawImageAt(selected_screenshot.top, 0, 0, 0);
 
     if (selected_screenshot.is_3d) {
-        SetTargetScreen(TargetScreen::TOP_RIGHT);
-        ClearTargetScreen(TargetScreen::TOP_RIGHT);
+        SetTargetScreen(TargetScreen::kTopRight);
+        ClearTargetScreen(TargetScreen::kTopRight);
 
         C2D_DrawImageAt(selected_screenshot.top_right, 0, 0, 0);
     }

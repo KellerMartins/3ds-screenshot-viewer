@@ -4,6 +4,8 @@
 #include <3ds.h>
 #include <citro2d.h>
 
+#include <string>
+
 namespace ui {
 constexpr int kTopScreenWidth = 400;
 constexpr int kTopScreenHeight = 240;
@@ -20,10 +22,12 @@ constexpr int kThumbnailHeight = (kTopScreenHeight / kThumbnailDownscale);
 constexpr int kThumbnailSize = (kThumbnailWidth * kThumbnailHeight * 3);
 
 enum TargetScreen {
-    TOP,
-    TOP_RIGHT,
-    BOTTOM,
+    kTop,
+    kTopRight,
+    kBottom,
 };
+
+enum TextAlignment { kLeft, kCenter, kRight };
 
 void Init();
 void Exit();
@@ -35,8 +39,12 @@ void SetUiFunctions(void (*input_fn)(), void (*render_fn)(bool));
 void ClearTargetScreen(TargetScreen screen, u32 clear_color = C2D_Color32(0x40, 0x40, 0x40, 0xFF));
 bool SetTargetScreen(TargetScreen screen);
 
-void input();
-void render();
+void DrawRect(float x, float y, float width, float height, u32 color);
+void DrawCircle(float x, float y, float radius, u32 color);
+void DrawRightArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color = C2D_Color32(0x00, 0x00, 0x00, 0xFF));
+void DrawLeftArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color = C2D_Color32(0x00, 0x00, 0x00, 0xFF));
+void DrawText(float x, float y, float size, u32 color, std::string text, TextAlignment alignment = TextAlignment::kCenter);
+float GetTextWidth(float size, std::string text);
 
 bool TouchedInRect(touchPosition touch, int x, int y, int w, int h);
 

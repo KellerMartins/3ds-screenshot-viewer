@@ -10,12 +10,12 @@ namespace tags {
 struct Tag {
     std::string name;
     u32 color;
-    u32 text_color;
 };
 
 void Load();
 void Save();
 std::vector<int>& GetScreenshotTagIds(std::string screenshot_name);
+std::vector<Tag>& GetTags();
 }  // namespace tags
 
 #endif  // TAGS_HPP_

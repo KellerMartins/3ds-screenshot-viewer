@@ -2,6 +2,7 @@
 
 #include <3ds.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -23,23 +24,28 @@ std::vector<u32> tag_colors = {
 std::vector<Tag> tags;
 std::map<std::string, std::vector<int>> screenshot_tags;
 
-std::string u32_to_hex_string(u32 x) {
+std::string color_to_hex_string(u32 x) {
     std::stringstream stream;
     stream << std::setfill('0') << std::setw(sizeof(u32) * 2) << std::hex << x;
     return stream.str();
 }
 
-u32 u32_from_hex_string(std::string x) { return std::stoul(x, nullptr, 16); }
+u32 color_from_hex_string(std::string x) {
+    std::string color;
+    if (x.size() == 8)
+        color = x.substr(6, 2) + x.substr(4, 2) + x.substr(2, 2) + x.substr(0, 2);  // RGBA to ABGR
+    else if (x.size() == 6)
+        color = "ff" + x.substr(4, 2) + x.substr(2, 2) + x.substr(0, 2);  // RGB to ABGR
+    else
+        color = "ff000000";  // Invalid color, set to black
+
+    return std::stoul(color, nullptr, 16);
+}
 
 void Save() {
     json tags_json = json::array();
     for (Tag& tag : tags) {
-        tags_json.push_back(json({{"name", tag.name}, {"color", u32_to_hex_string(tag.color)}, {"text_color", u32_to_hex_string(tag.text_color)}}));
-    }
-
-    json colors_json = json::array();
-    for (u32& color : tag_colors) {
-        colors_json.push_back(u32_to_hex_string(color));
+        tags_json.push_back(json({{"name", tag.name}, {"color", color_to_hex_string(tag.color)}}));
     }
 
     std::ofstream f(settings::TagsPath());
@@ -63,20 +69,8 @@ void Load() {
         for (auto& tag : tags_data["tags"]) {
             tags.push_back(Tag({
                 tag["name"],
-                u32_from_hex_string(tag["color"]),
-                u32_from_hex_string(tag["text_color"]),
+                color_from_hex_string(tag["color"]),
             }));
-        }
-
-        if (tags_data.contains("colors")) {
-            tag_colors.clear();
-
-            for (auto& item : tags_data["colors"]) {
-                std::string hex_color = item;
-                u32 color = u32_from_hex_string(hex_color);
-
-                tag_colors.push_back(color);
-            }
         }
 
         f.close();
@@ -92,4 +86,6 @@ std::vector<int>& GetScreenshotTagIds(std::string screenshot_name) {
 
     return screenshot_tags[screenshot_name];
 }
+
+std::vector<Tag>& GetTags() { return tags; }
 }  // namespace tags

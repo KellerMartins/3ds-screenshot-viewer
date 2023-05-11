@@ -16,6 +16,8 @@ C3D_RenderTarget *top_target;
 C3D_RenderTarget *top_right_target;
 C3D_RenderTarget *bottom_target;
 
+C2D_TextBuf dynamicBuf, sizeBuf;
+
 void (*input_function)() = nullptr;
 void (*render_function)(bool) = nullptr;
 
@@ -25,6 +27,9 @@ void Init() {
     top_target = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
     top_right_target = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
     bottom_target = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+
+    sizeBuf = C2D_TextBufNew(512);
+    dynamicBuf = C2D_TextBufNew(1024);
 
     gfxInitDefault();
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -37,6 +42,9 @@ void Init() {
 }
 
 void Exit() {
+    C2D_TextBufDelete(dynamicBuf);
+    C2D_TextBufDelete(sizeBuf);
+
     C2D_Fini();
     C3D_Fini();
     gfxExit();
@@ -57,6 +65,8 @@ void Render() {
 
     if (render_function != nullptr) render_function(false);
 
+    C2D_TextBufClear(dynamicBuf);
+    C2D_TextBufClear(sizeBuf);
     C3D_FrameEnd(0);
 }
 
@@ -67,17 +77,17 @@ void SetUiFunctions(void (*input_fn)(), void (*render_fn)(bool)) {
 
 bool SetTargetScreen(TargetScreen screen) {
     switch (screen) {
-        case TargetScreen::TOP:
+        case TargetScreen::kTop:
             if (settings::ShowConsole()) return false;
 
             C2D_SceneBegin(top_target);
             break;
-        case TargetScreen::TOP_RIGHT:
+        case TargetScreen::kTopRight:
             if (settings::ShowConsole()) return false;
 
             C2D_SceneBegin(top_right_target);
             break;
-        case TargetScreen::BOTTOM:
+        case TargetScreen::kBottom:
             C2D_SceneBegin(bottom_target);
             break;
     }
@@ -87,19 +97,57 @@ bool SetTargetScreen(TargetScreen screen) {
 
 void ClearTargetScreen(TargetScreen screen, u32 clear_color) {
     switch (screen) {
-        case TargetScreen::TOP:
+        case TargetScreen::kTop:
             C2D_TargetClear(top_target, clear_color);
             break;
-        case TargetScreen::TOP_RIGHT:
+        case TargetScreen::kTopRight:
             C2D_TargetClear(top_right_target, clear_color);
             break;
-        case TargetScreen::BOTTOM:
+        case TargetScreen::kBottom:
             C2D_TargetClear(bottom_target, clear_color);
             break;
     }
 }
 
-bool pressed_exit() { return pressed_exit_button; }
+void DrawRect(float x, float y, float width, float height, u32 color) { C2D_DrawRectSolid(x, y, 0, width, height, color); }
+
+void DrawCircle(float x, float y, float radius, u32 color) { C2D_DrawCircleSolid(x, y, 0, radius, color); }
+
+void DrawRightArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
+    C2D_DrawTriangle(x - scale / 4 + 3, y + scale / 2, color, x - scale / 4 + 3, y - scale / 2, color, x + scale / 2, y, color, 0);
+}
+
+void DrawLeftArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
+    C2D_DrawTriangle(x + scale / 4 - 3, y + scale / 2, color, x + scale / 4 - 3, y - scale / 2, color, x - scale / 2, y, color, 0);
+}
+
+void DrawText(float x, float y, float size, u32 color, std::string text, TextAlignment alignment) {
+    C2D_Text t;
+    float width, height;
+    C2D_TextParse(&t, dynamicBuf, text.c_str());
+    C2D_TextGetDimensions(&t, size, size, &width, &height);
+
+    switch (alignment) {
+        case TextAlignment::kCenter:
+            x -= width / 2;
+            break;
+        case TextAlignment::kRight:
+            x -= width;
+            break;
+        default:
+            break;
+    }
+    C2D_DrawText(&t, C2D_WithColor, x, y, 0, size, size, color);
+}
+
+float GetTextWidth(float size, std::string text) {
+    float width;
+    C2D_Text t;
+    C2D_TextParse(&t, dynamicBuf, text.c_str());
+    C2D_TextGetDimensions(&t, size, size, &width, nullptr);
+    return width;
+}
+
 bool TouchedInRect(touchPosition touch, int x, int y, int w, int h) { return touch.px > x && touch.px < x + w && touch.py > y && touch.py < y + h; }
 
 bool PressedExit() { return pressed_exit_button; }
