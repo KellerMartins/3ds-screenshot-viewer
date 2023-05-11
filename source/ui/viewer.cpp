@@ -4,6 +4,7 @@
 #include <citro2d.h>
 
 #include "screenshots.hpp"
+#include "settings.hpp"
 #include "ui/tags_menu.hpp"
 
 namespace ui::viewer {
@@ -41,6 +42,7 @@ bool show_ui = true;
 bool is_3d = false;
 bool changed_selection = true;
 bool changed_screen = true;
+float slider = 0;
 
 int GetPageIndex(int x) { return (((x) / (kNRows * kNCols)) * (kNRows * kNCols)); }
 int GetSelectedPage() { return GetPageIndex(selected_index); }
@@ -103,6 +105,12 @@ void Input() {
 
     if (keysDown() & KEY_SELECT) {
         tags_menu::Show();
+    }
+
+    float new_slider = 1.0f - osGet3DSliderState();
+    if (slider != new_slider) {
+        slider = new_slider;
+        changed_screen = true;
     }
 
     if (last_loaded_thumbs != screenshots::NumLoadedThumbnails()) {
@@ -174,16 +182,16 @@ void DrawBottom() {
 void DrawTop() {
     if (!SetTargetScreen(TargetScreen::kTop)) return;
 
-    ClearTargetScreen(TargetScreen::kTop);
+    ClearTargetScreen(TargetScreen::kTop, clrBlack);
     gfxSet3D(selected_screenshot.is_3d);
 
-    C2D_DrawImageAt(selected_screenshot.top, 0, 0, 0);
+    C2D_DrawImageAt(selected_screenshot.top, selected_screenshot.is_3d ? -slider * settings::ExtraStereoOffset() : 0, 0, 0);
 
     if (selected_screenshot.is_3d) {
         SetTargetScreen(TargetScreen::kTopRight);
-        ClearTargetScreen(TargetScreen::kTopRight);
+        ClearTargetScreen(TargetScreen::kTopRight, clrBlack);
 
-        C2D_DrawImageAt(selected_screenshot.top_right, 0, 0, 0);
+        C2D_DrawImageAt(selected_screenshot.top_right, slider * settings::ExtraStereoOffset(), 0, 0);
     }
 }
 

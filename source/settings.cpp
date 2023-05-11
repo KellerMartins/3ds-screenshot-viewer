@@ -17,6 +17,7 @@ const std::string setings_path = app_folder_path + "settings.json";
 std::string tags_path = app_folder_path + "tags.json";
 std::string screenshots_path = "/luma/screenshots";
 
+int extra_stereo_offset = 7;
 bool show_console = false;
 
 void Save() {
@@ -24,6 +25,7 @@ void Save() {
     f << "{\n"
       << "\"screenshots_path\": \"" << screenshots_path << "\",\n"
       << "\"tags_path\": \"" << tags_path << "\",\n"
+      << "\"extra_stereo_offset\": " << extra_stereo_offset << "\n"
       << "\"show_console\": " << (show_console ? "true" : "false") << "\n"
       << "}\n";
     f.close();
@@ -51,5 +53,6 @@ void Load() {
 
 const std::string ScreenshotsPath() { return screenshots_path; }
 const std::string TagsPath() { return tags_path; }
+const int ExtraStereoOffset() { return extra_stereo_offset; }
 const bool ShowConsole() { return show_console; }
 }  // namespace settings

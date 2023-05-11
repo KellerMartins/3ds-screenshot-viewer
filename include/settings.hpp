@@ -9,6 +9,7 @@ void Load();
 
 const std::string ScreenshotsPath();
 const std::string TagsPath();
+const int ExtraStereoOffset();
 const bool ShowConsole();
 }  // namespace settings
 
