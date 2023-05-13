@@ -5,14 +5,16 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <string>
+
+#define TOML_EXCEPTIONS 0
+#define TOML_ENABLE_FORMATTERS 0
+#include <toml++/toml.hpp>
 #include <vector>
 
-#include "nlohmann/json.hpp"
 #include "settings.hpp"
-
-using json = nlohmann::json;
 
 namespace tags {
 std::vector<u32> tag_colors = {
@@ -44,45 +46,69 @@ u32 color_from_hex_string(std::string x) {
 
 void Save() {
     std::ofstream f(settings::TagsPath());
-    f << "{\n"
-      << "\"tags\": [\n";
+    f << "tags = [\n";
     for (size_t i = 0; i < tags.size(); i++) {
         f << "  { "
-          << "\"name\": \"" << tags[i].name << "\", "
-          << "\"color\": \"" << color_to_hex_string(tags[i].color) << "\"";
-        f << " }" << (i == tags.size() - 1 ? "\n" : ",\n");
+          << "name = \"" << tags[i].name << "\", "
+          << "color = \"" << color_to_hex_string(tags[i].color) << "\"";
+        f << " },\n";
     }
-    f << "],\n";
+    f << "]\n\n";
 
-    f << "\"screenshot_tags\": {\n";
-    size_t i = 0;
+    f << "[screenshot_tags]\n";
+
     for (auto const& kv : screenshot_tags) {
-        f << "  \"" << kv.first << "\": " << json(kv.second).dump();
-        f << (i == screenshot_tags.size() - 1 ? "\n" : ",\n");
-        i++;
+        f << "  \"" << kv.first << "\" = [";
+        for (size_t i = 0; i < kv.second.size(); i++) {
+            f << kv.second[i] << (i == kv.second.size() - 1 ? "" : ", ");
+        }
+        f << "]\n";
     }
-    f << "}}\n";
+
     f.close();
 }
 
 void Load() {
-    json tags_data;
+    tags.clear();
+    screenshot_tags.clear();
 
     const std::string tags_path = settings::TagsPath();
     if (std::filesystem::exists(tags_path)) {
-        std::ifstream f(tags_path);
-        tags_data = json::parse(f);
-
-        screenshot_tags = tags_data["screenshot_tags"];
-
-        for (auto& tag : tags_data["tags"]) {
-            tags.push_back(Tag({
-                tag["name"],
-                color_from_hex_string(tag["color"]),
-            }));
+        toml::parse_result result = toml::parse_file(tags_path);
+        if (!result) {
+            std::cerr << "Parsing failed:\n" << result.error() << "\n";
+            return;
         }
 
-        f.close();
+        toml::table data = std::move(result).table();
+
+        if (toml::array* arr = data["tags"].as_array()) {
+            arr->for_each([](auto&& el) {
+                if constexpr (toml::is_table<decltype(el)>) {
+                    if (el["name"].is_string() && el["color"].is_string()) {
+                        tags.push_back(Tag({
+                            el["name"].as_string()->get(),
+                            color_from_hex_string(el["color"].as_string()->get()),
+                        }));
+                    }
+                }
+            });
+        }
+
+        if (toml::table* tbl = data["screenshot_tags"].as_table()) {
+            for (auto&& [key, value] : *tbl) {
+                std::string screenshot_name = std::string(key.str());
+                screenshot_tags[screenshot_name] = {};
+
+                if (toml::array* ids_arr = value.as_array()) {
+                    ids_arr->for_each([screenshot_name](auto&& el) {
+                        if constexpr (toml::is_integer<decltype(el)>) {
+                            screenshot_tags[screenshot_name].push_back(el.get());
+                        }
+                    });
+                }
+            }
+        }
     } else {
         Save();
     }
