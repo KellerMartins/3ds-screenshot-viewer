@@ -133,6 +133,13 @@ void Input() {
         changed_screen = true;
     }
 
+    if (keysDown() & KEY_B) {
+        if (multi_selection_mode) {
+            multi_selection_mode = false;
+        }
+        changed_screen = true;
+    }
+
     if (keysDown() & KEY_SELECT || keysDown() & KEY_X) {
         if (multi_selection_mode) {
             tags_menu::Show("Select screenshot tags", tags::GetScreenshotsTagIds(multi_selection_screenshots), OnSelectScreenshotTags);
