@@ -3,6 +3,7 @@
 
 #include <3ds.h>
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -12,10 +13,16 @@ struct Tag {
     u32 color;
 };
 
+using TagId = unsigned int;
+
 void Load();
 void Save();
-std::vector<int>& GetScreenshotTagIds(std::string screenshot_name);
-std::vector<Tag>& GetTags();
+std::vector<TagId>& GetScreenshotTagIds(std::string screenshot_name);
+std::set<TagId> GetScreenshotsTagIds(std::set<std::string> screenshot_names);
+Tag* Get(TagId id);
+size_t Size();
+
+void SetScreenshotsTagIds(std::set<std::string> screenshot_names, std::set<TagId> tags);
 }  // namespace tags
 
 #endif  // TAGS_HPP_

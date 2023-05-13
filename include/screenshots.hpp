@@ -5,6 +5,7 @@
 #include <citro2d.h>
 
 #include <string>
+#include <tags.hpp>
 #include <vector>
 
 namespace screenshots {
@@ -22,12 +23,12 @@ struct ScreenshotInfo {
     std::string path_top_right;
     std::string path_bottom;
 
-    std::vector<int>& tags;
+    std::vector<tags::TagId>& tags;
 
     bool has_thumbnail;
     C2D_Image thumbnail;
 
-    ScreenshotInfo(std::string name, std::vector<int>& tags) : name(name), tags(tags), has_thumbnail(false) {}
+    ScreenshotInfo(std::string name, std::vector<tags::TagId>& tags) : name(name), tags(tags), has_thumbnail(false) {}
 };
 
 void Init();

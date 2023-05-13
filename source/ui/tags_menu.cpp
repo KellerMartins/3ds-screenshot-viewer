@@ -42,9 +42,10 @@ const u32 clrOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x7F);
 struct TagItem {
     tags::Tag* tag;
     float width;
-    int id;
-    bool selected = false;
-    TagItem(tags::Tag* tag, int id) : tag(tag), width(GetTextWidth(kTagTextSize, tag->name) + kTagPadding * 2), id(id) {}
+    tags::TagId id;
+    bool selected;
+    TagItem(tags::Tag* tag, tags::TagId id, bool selected)
+        : tag(tag), width(GetTextWidth(kTagTextSize, tag->name) + kTagPadding * 2), id(id), selected(selected) {}
 };
 
 struct TagRow {
@@ -84,19 +85,24 @@ struct TagRow {
     }
 };
 
+std::string top_title;
 std::vector<TagRow> tag_rows;
+void (*return_callback)(bool, std::set<tags::TagId>);
 unsigned int row_offset = 0;
+bool changed_initial_selection;
 bool changed;
 
-void Show() {
+void Show(std::string title, std::set<tags::TagId> selected_tags, void (*callback)(bool, std::set<tags::TagId>)) {
     changed = true;
     SetUiFunctions(Input, Render);
 
+    top_title = title;
+    return_callback = callback;
+    changed_initial_selection = false;
     tag_rows = {TagRow()};
 
-    std::vector<tags::Tag>& tags = tags::GetTags();
-    for (size_t i = 0; i < tags.size(); i++) {
-        TagItem item = TagItem(&tags[i], i);
+    for (tags::TagId id = 0; id < tags::Size(); id++) {
+        TagItem item = TagItem(tags::Get(id), id, selected_tags.contains(id));
 
         if (tag_rows.back().width > 0 && tag_rows.back().width + item.width + kTagMargin > kMenuWidth) {
             tag_rows.push_back(TagRow());
@@ -107,9 +113,25 @@ void Show() {
     }
 }
 
+void Close() {
+    std::set<tags::TagId> selected;
+
+    if (changed_initial_selection) {
+        for (TagRow& row : tag_rows) {
+            for (TagItem& item : row.items) {
+                if (item.selected) {
+                    selected.insert(item.id);
+                }
+            }
+        }
+    }
+
+    return_callback(changed_initial_selection, selected);
+}
+
 void Input() {
-    if ((keysDown() & KEY_SELECT) || (keysDown() & KEY_B)) {
-        viewer::Show();
+    if ((keysDown() & KEY_SELECT) || (keysDown() & KEY_B) || (keysDown() & KEY_X)) {
+        Close();
     }
 
     if (keysDown() & KEY_DLEFT) {
@@ -135,6 +157,7 @@ void Input() {
                 if (touched_tag != nullptr) {
                     touched_tag->selected = !touched_tag->selected;
                     changed = true;
+                    changed_initial_selection = true;
                     break;
                 }
                 y += kTagRowOffsetY;
@@ -154,7 +177,7 @@ void Input() {
             }
         } else {
             // Touched outside
-            viewer::Show();
+            Close();
         }
     }
 }
@@ -209,12 +232,12 @@ void Render(bool force) {
 
     if (SetTargetScreen(TargetScreen::kTop)) {
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
-        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, "Filter by tags");
+        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, top_title);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite, "Touch and hold a tag to edit");
 
         SetTargetScreen(TargetScreen::kTopRight);
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
-        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, "Filter by tags");
+        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, top_title);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite, "Touch and hold a tag to edit");
     }
 

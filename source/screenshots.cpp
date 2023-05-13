@@ -92,7 +92,6 @@ void Init() {
                 name = filename.substr(0, filename.size() - suffixes[s].size());
 
                 if (screenshots.size() == 0 || screenshots.back().name != name) {
-                    std::cout << name << "\n";
                     screenshots.push_back(ScreenshotInfo(name, tags::GetScreenshotTagIds(name)));
                 }
 
