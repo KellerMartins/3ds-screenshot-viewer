@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "tags.hpp"
+#include "ui/tag_editor.hpp"
 #include "ui/viewer.hpp"
 
 namespace ui::tags_menu {
@@ -32,6 +33,8 @@ const int kTagRowOffsetY = kTagHeight + kTagMargin;
 const float kTagTextSize = 0.6;
 const float kTagTextOffsetY = 3;
 
+const unsigned int kTagEditTouchHoldTicks = 20;
+
 const u32 clrWhite = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
 const u32 clrBlack = C2D_Color32(0x00, 0x00, 0x00, 0xFF);
 const u32 clrButtons = C2D_Color32(0x7F, 0x7F, 0x7F, 0xFF);
@@ -40,12 +43,12 @@ const u32 clrBackground = C2D_Color32(0x40, 0x40, 0x40, 0xFF);
 const u32 clrOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x7F);
 
 struct TagItem {
-    tags::Tag* tag;
+    tags::tag_ptr tag;
+    int index;
     float width;
-    tags::TagId id;
     bool selected;
-    TagItem(tags::Tag* tag, tags::TagId id, bool selected)
-        : tag(tag), width(GetTextWidth(kTagTextSize, tag->name) + kTagPadding * 2), id(id), selected(selected) {}
+    TagItem(tags::tag_ptr tag, int index, bool selected)
+        : tag(tag), index(index), width(GetTextWidth(kTagTextSize, tag->name) + kTagPadding * 2), selected(selected) {}
 };
 
 struct TagRow {
@@ -87,22 +90,28 @@ struct TagRow {
 
 std::string top_title;
 std::vector<TagRow> tag_rows;
-void (*return_callback)(bool, std::set<tags::TagId>);
+void (*return_callback)(bool, std::set<tags::tag_ptr>);
 unsigned int row_offset = 0;
+unsigned int ticks_touch_held = 0;
+touchPosition touch;
+bool touched_down;
 bool changed_initial_selection;
 bool changed;
 
-void Show(std::string title, std::set<tags::TagId> selected_tags, void (*callback)(bool, std::set<tags::TagId>)) {
+void Show(std::string title, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, std::set<tags::tag_ptr>)) {
     changed = true;
     SetUiFunctions(Input, Render);
 
     top_title = title;
     return_callback = callback;
     changed_initial_selection = false;
+    touched_down = false;
+    ticks_touch_held = 0;
     tag_rows = {TagRow()};
 
-    for (tags::TagId id = 0; id < tags::Size(); id++) {
-        TagItem item = TagItem(tags::Get(id), id, selected_tags.contains(id));
+    for (int index = 0; index < static_cast<int>(tags::Count()); index++) {
+        auto tag = tags::Get(index);
+        TagItem item = TagItem(tag, index, selected_tags.contains(tag));
 
         if (tag_rows.back().width > 0 && tag_rows.back().width + item.width + kTagMargin > kMenuWidth) {
             tag_rows.push_back(TagRow());
@@ -113,20 +122,39 @@ void Show(std::string title, std::set<tags::TagId> selected_tags, void (*callbac
     }
 }
 
-void Close() {
-    std::set<tags::TagId> selected;
+std::set<tags::tag_ptr> GetSelectedTags() {
+    std::set<tags::tag_ptr> selected;
 
-    if (changed_initial_selection) {
-        for (TagRow& row : tag_rows) {
-            for (TagItem& item : row.items) {
-                if (item.selected) {
-                    selected.insert(item.id);
-                }
+    for (TagRow& row : tag_rows) {
+        for (TagItem& item : row.items) {
+            if (item.selected) {
+                selected.insert(item.tag);
             }
         }
     }
 
+    return selected;
+}
+
+void Close() {
+    std::set<tags::tag_ptr> selected;
+
+    if (changed_initial_selection) {
+        selected = GetSelectedTags();
+    }
+
     return_callback(changed_initial_selection, selected);
+}
+
+void OnTagEdited() { Show(top_title, GetSelectedTags(), return_callback); }
+
+void OnTagDeleted(tags::tag_ptr deleted_id) {
+    auto selected_tags = GetSelectedTags();
+    if (selected_tags.contains(deleted_id)) {
+        selected_tags.erase(selected_tags.find(deleted_id));
+    }
+
+    Show(top_title, selected_tags, return_callback);
 }
 
 void Input() {
@@ -144,40 +172,74 @@ void Input() {
         changed = true;
     }
 
-    if (keysDown() & KEY_TOUCH) {
-        // Read the touch screen coordinates
-        touchPosition touch;
+    // Read the touch screen coordinates
+    if (keysDown() & KEY_TOUCH || keysHeld() & KEY_TOUCH) {
         hidTouchRead(&touch);
+    }
 
-        // Touched inside the menu
-        if (TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - kMenuHeight, kMenuWidth, kMenuHeight)) {
-            float y = kTagsPositionY;
-            for (size_t i = row_offset; i < tag_rows.size() && i - row_offset < kTagRows; i++) {
-                TagItem* touched_tag = tag_rows[i].touched(y, touch);
-                if (touched_tag != nullptr) {
-                    touched_tag->selected = !touched_tag->selected;
-                    changed = true;
-                    changed_initial_selection = true;
-                    break;
-                }
-                y += kTagRowOffsetY;
-            }
+    if (keysDown() & KEY_TOUCH) {
+        touched_down = true;
 
-            if (TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing,
-                              kButtonArrowWidth, kButtonHeight)) {
-                row_offset = std::max(0, static_cast<int>(row_offset) - kTagRows);
-                changed = true;
-            }
-
-            if (row_offset + kTagRows < tag_rows.size() &&
-                TouchedInRect(touch, kBottomScreenWidth - ((kBottomScreenWidth - kMenuWidth) / 2) - kButtonArrowWidth - kButtonSpacing,
-                              kBottomScreenHeight - kButtonHeight - kButtonSpacing, kButtonArrowWidth, kButtonHeight)) {
-                row_offset = std::min(tag_rows.size() - 1, row_offset + kTagRows);
-                changed = true;
-            }
-        } else {
-            // Touched outside
+        // Touched outside the menu
+        if (!TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - kMenuHeight, kMenuWidth, kMenuHeight)) {
             Close();
+        }
+
+        // Previous tags page
+        if (TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing,
+                          kButtonArrowWidth, kButtonHeight)) {
+            row_offset = std::max(0, static_cast<int>(row_offset) - kTagRows);
+            changed = true;
+        }
+
+        // Next tags page
+        if (row_offset + kTagRows < tag_rows.size() &&
+            TouchedInRect(touch, kBottomScreenWidth - ((kBottomScreenWidth - kMenuWidth) / 2) - kButtonArrowWidth - kButtonSpacing,
+                          kBottomScreenHeight - kButtonHeight - kButtonSpacing, kButtonArrowWidth, kButtonHeight)) {
+            row_offset = std::min(tag_rows.size() - 1, row_offset + kTagRows);
+            changed = true;
+        }
+
+        // Create tag
+        if ((tag_rows.size() <= 7 && TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing,
+                                                   kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 2, kButtonHeight)) ||
+            TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing * 2 + kButtonArrowWidth,
+                          kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 4 - kButtonArrowWidth * 2, kButtonHeight)) {
+            tag_editor::Show(true, 0, OnTagEdited, OnTagDeleted);
+            changed = true;
+        }
+    }
+
+    if (keysHeld() & KEY_TOUCH) {
+        if (keysDown() & KEY_TOUCH)
+            ticks_touch_held = 0;
+        else
+            ticks_touch_held = std::min(kTagEditTouchHoldTicks, ticks_touch_held + 1);
+
+        float y = kTagsPositionY;
+        for (size_t i = row_offset; i < tag_rows.size() && i - row_offset < kTagRows; i++) {
+            TagItem* touched_tag = tag_rows[i].touched(y, touch);
+            if (ticks_touch_held == kTagEditTouchHoldTicks && touched_tag != nullptr) {
+                tag_editor::Show(false, touched_tag->tag, OnTagEdited, OnTagDeleted);
+                break;
+            }
+            y += kTagRowOffsetY;
+        }
+    }
+
+    if (keysUp() & KEY_TOUCH && touched_down) {
+        touched_down = false;
+
+        float y = kTagsPositionY;
+        for (size_t i = row_offset; i < tag_rows.size() && i - row_offset < kTagRows; i++) {
+            TagItem* touched_tag = tag_rows[i].touched(y, touch);
+            if (touched_tag != nullptr) {
+                touched_tag->selected = !touched_tag->selected;
+                changed = true;
+                changed_initial_selection = true;
+                break;
+            }
+            y += kTagRowOffsetY;
         }
     }
 }
@@ -207,12 +269,12 @@ void Render(bool force) {
     }
 
     if (tag_rows.size() <= 7) {
-        // Action button
+        // Create tag button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 2,
                  kButtonHeight, clrButtons);
         DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight + kButtonTextOffsetY, 0.5, clrBlack, "Add Tag");
     } else {
-        // Action button
+        // Create tag button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kButtonArrowWidth, kButtonHeight,
                  row_offset > 0 ? clrButtons : clrButtonsDisabled);
         DrawRect(kBottomScreenWidth - ((kBottomScreenWidth - kMenuWidth) / 2) - kButtonArrowWidth - kButtonSpacing,

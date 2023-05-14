@@ -6,25 +6,17 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <map>
-#include <string>
 
 #define TOML_EXCEPTIONS 0
 #define TOML_ENABLE_FORMATTERS 0
 #include <toml++/toml.hpp>
-#include <vector>
 
 #include "settings.hpp"
 
 namespace tags {
-std::vector<u32> tag_colors = {
-    0x000000ff, 0x1d2b53ff, 0x7e2553ff, 0x008751ff, 0xab5236ff, 0x5f574fff, 0xc2c3c7ff, 0xfff1e8ff, 0xff004dff, 0xffa300ff, 0xffec27ff,
-    0x00e436ff, 0x29adffff, 0x83769cff, 0xff77a8ff, 0xffccaaff, 0x291814ff, 0x111d35ff, 0x422136ff, 0x125359ff, 0x742f29ff, 0x49333bff,
-    0xa28879ff, 0xf3ef7dff, 0xbe1250ff, 0xff6c24ff, 0xa8e72eff, 0x00b543ff, 0x065ab5ff, 0x754665ff, 0xff6e59ff, 0xff9d81ff,
-};
 
-std::vector<Tag> tags;
-std::map<std::string, std::vector<TagId>> screenshot_tags;
+std::vector<std::shared_ptr<Tag>> tags;
+std::map<std::string, std::vector<std::shared_ptr<const Tag>>> screenshot_tags;
 
 std::string color_to_hex_string(u32 x) {
     std::stringstream stream;
@@ -44,13 +36,22 @@ u32 color_from_hex_string(std::string x) {
     return std::stoul(color, nullptr, 16);
 }
 
+int GetTagIndex(std::shared_ptr<const Tag> tag) {
+    for (size_t i = 0; i < tags.size(); i++) {
+        if (tag == tags[i]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void Save() {
     std::ofstream f(settings::TagsPath());
     f << "tags = [\n";
     for (size_t i = 0; i < tags.size(); i++) {
         f << "  { "
-          << "name = \"" << tags[i].name << "\", "
-          << "color = \"" << color_to_hex_string(tags[i].color) << "\"";
+          << "name = \"" << tags[i]->name << "\", "
+          << "color = \"" << color_to_hex_string(tags[i]->color) << "\"";
         f << " },\n";
     }
     f << "]\n\n";
@@ -60,7 +61,7 @@ void Save() {
     for (auto const& kv : screenshot_tags) {
         f << "  \"" << kv.first << "\" = [";
         for (size_t i = 0; i < kv.second.size(); i++) {
-            f << kv.second[i] << (i == kv.second.size() - 1 ? "" : ", ");
+            f << GetTagIndex(kv.second[i]) << (i == kv.second.size() - 1 ? "" : ", ");
         }
         f << "]\n";
     }
@@ -86,10 +87,10 @@ void Load() {
             arr->for_each([](auto&& el) {
                 if constexpr (toml::is_table<decltype(el)>) {
                     if (el["name"].is_string() && el["color"].is_string()) {
-                        tags.push_back(Tag({
+                        tags.push_back(std::shared_ptr<Tag>(new Tag({
                             el["name"].as_string()->get(),
                             color_from_hex_string(el["color"].as_string()->get()),
-                        }));
+                        })));
                     }
                 }
             });
@@ -103,7 +104,9 @@ void Load() {
                 if (toml::array* ids_arr = value.as_array()) {
                     ids_arr->for_each([screenshot_name](auto&& el) {
                         if constexpr (toml::is_integer<decltype(el)>) {
-                            screenshot_tags[screenshot_name].push_back(el.get());
+                            if (el.get() >= 0 && el.get() < tags.size()) {
+                                screenshot_tags[screenshot_name].push_back(tags[el.get()]);
+                            }
                         }
                     });
                 }
@@ -114,19 +117,19 @@ void Load() {
     }
 }
 
-std::vector<TagId>& GetScreenshotTagIds(std::string screenshot_name) {
+std::vector<std::shared_ptr<const Tag>>& GetScreenshotTags(std::string screenshot_name) {
     if (!screenshot_tags.contains(screenshot_name)) {
-        screenshot_tags[screenshot_name] = std::vector<TagId>();
+        screenshot_tags[screenshot_name] = {};
     }
 
     return screenshot_tags[screenshot_name];
 }
 
-std::set<TagId> GetScreenshotsTagIds(std::set<std::string> screenshot_names) {
-    std::set<TagId> tags_set;
+std::set<std::shared_ptr<const Tag>> GetScreenshotsTags(std::set<std::string> screenshot_names) {
+    std::set<std::shared_ptr<const Tag>> tags_set;
     for (const std::string& name : screenshot_names) {
         if (screenshot_tags.contains(name)) {
-            for (TagId& tag : screenshot_tags[name]) {
+            for (auto tag : screenshot_tags[name]) {
                 tags_set.insert(tag);
             }
         }
@@ -135,19 +138,56 @@ std::set<TagId> GetScreenshotsTagIds(std::set<std::string> screenshot_names) {
     return tags_set;
 }
 
-Tag* Get(TagId id) { return &tags[id]; }
+std::shared_ptr<const Tag> Get(size_t index) { return tags[index]; }
 
-size_t Size() { return tags.size(); }
+size_t Count() { return tags.size(); }
 
-void SetScreenshotsTagIds(std::set<std::string> screenshot_names, std::set<TagId> tags) {
+void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<std::shared_ptr<const Tag>> tags) {
     for (const std::string& name : screenshot_names) {
-        screenshot_tags[name] = std::vector<TagId>();
+        screenshot_tags[name] = {};
 
-        for (const TagId& tag : tags) {
+        for (auto tag : tags) {
             screenshot_tags[name].push_back(tag);
         }
     }
 
     Save();
+}
+
+void AddTag(Tag new_tag) {
+    tags.push_back(std::shared_ptr<Tag>(new Tag(new_tag)));
+    Save();
+}
+
+void ReplaceTag(std::shared_ptr<const Tag> tag, Tag new_tag) {
+    int idx = GetTagIndex(tag);
+    if (idx >= 0) {
+        *tags[idx] = new_tag;
+        Save();
+    }
+}
+void MoveTag(size_t src_idx, size_t dst_idx) {
+    if (src_idx == dst_idx) return;
+
+    if (src_idx >= tags.size() || dst_idx >= tags.size()) return;
+
+    auto t = tags[src_idx];
+    tags.erase(tags.begin() + src_idx);
+    tags.insert(tags.begin() + dst_idx, t);
+
+    Save();
+}
+
+void DeleteTag(std::shared_ptr<const Tag> tag) {
+    int idx = GetTagIndex(tag);
+    if (idx >= 0) {
+        tags.erase(tags.begin() + idx);
+
+        for (auto& kv : screenshot_tags) {
+            kv.second.erase(std::remove_if(kv.second.begin(), kv.second.end(), [tag](auto t) { return t == tag; }), kv.second.end());
+        }
+
+        Save();
+    }
 }
 }  // namespace tags

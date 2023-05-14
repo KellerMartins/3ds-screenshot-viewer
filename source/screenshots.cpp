@@ -92,7 +92,7 @@ void Init() {
                 name = filename.substr(0, filename.size() - suffixes[s].size());
 
                 if (screenshots.size() == 0 || screenshots.back().name != name) {
-                    screenshots.push_back(ScreenshotInfo(name, tags::GetScreenshotTagIds(name)));
+                    screenshots.push_back(ScreenshotInfo(name, tags::GetScreenshotTags(name)));
                 }
 
                 ScreenshotInfo &scrs = screenshots.back();

@@ -23,12 +23,12 @@ struct ScreenshotInfo {
     std::string path_top_right;
     std::string path_bottom;
 
-    std::vector<tags::TagId>& tags;
+    std::vector<tags::tag_ptr>& tags;
 
     bool has_thumbnail;
     C2D_Image thumbnail;
 
-    ScreenshotInfo(std::string name, std::vector<tags::TagId>& tags) : name(name), tags(tags), has_thumbnail(false) {}
+    ScreenshotInfo(std::string name, std::vector<tags::tag_ptr>& tags) : name(name), tags(tags), has_thumbnail(false) {}
 };
 
 void Init();

@@ -39,7 +39,7 @@ const u32 clrClear = C2D_Color32(0xFF, 0xD8, 0xB0, 0xFF);
 
 screenshots::Screenshot selected_screenshot;
 std::set<std::string> multi_selection_screenshots;
-std::set<tags::TagId> tags_filter;
+std::set<tags::tag_ptr> tags_filter;
 unsigned int selected_index = 0;
 unsigned int page_index = 0;
 
@@ -61,8 +61,8 @@ void DrawTop();
 void TouchDownActions();
 void TouchHoldActions();
 void ToggleScreenshotSelection(unsigned int);
-void OnSelectScreenshotTags(bool, std::set<tags::TagId>);
-void OnSelectFilterTags(bool, std::set<tags::TagId>);
+void OnSelectScreenshotTags(bool, std::set<tags::tag_ptr>);
+void OnSelectFilterTags(bool, std::set<tags::tag_ptr>);
 
 void Show() {
     changed_screen = true;
@@ -142,7 +142,7 @@ void Input() {
 
     if (keysDown() & KEY_SELECT || keysDown() & KEY_X) {
         if (multi_selection_mode) {
-            tags_menu::Show("Select screenshot tags", tags::GetScreenshotsTagIds(multi_selection_screenshots), OnSelectScreenshotTags);
+            tags_menu::Show("Select screenshot tags", tags::GetScreenshotsTags(multi_selection_screenshots), OnSelectScreenshotTags);
         } else {
             tags_menu::Show("Filter by tags", tags_filter, OnSelectFilterTags);
         }
@@ -206,9 +206,9 @@ void DrawInterface() {
             if (multi_selection_mode) {
                 size_t num_tags = screenshot.tags.size();
                 int tag_x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c;
-                for (tags::TagId id : screenshot.tags) {
+                for (auto tag : screenshot.tags) {
                     DrawRect(tag_x, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r + kThumbnailHeight - kTagLineThickness, kThumbnailWidth / num_tags,
-                             kTagLineThickness, tags::Get(id)->color);
+                             kTagLineThickness, tag->color);
                     tag_x += kThumbnailWidth / num_tags;
                 }
             }
@@ -225,7 +225,7 @@ void DrawInterface() {
     DrawRightArrow(kBottomScreenWidth - kNavbarIconMargin - kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
 
     if (multi_selection_mode) {
-        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kNavbarHeight * 0.85, 0.5, clrBlack, "Deselect all");
+        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kNavbarHeight * 0.85, 0.5, clrBlack, "Back");
     } else {
         DrawDownArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
     }
@@ -342,21 +342,17 @@ void ToggleScreenshotSelection(unsigned int index) {
     std::string name = screenshots::GetInfo(index).name;
     if (multi_selection_screenshots.contains(name)) {
         multi_selection_screenshots.erase(multi_selection_screenshots.find(name));
-        if (multi_selection_screenshots.size() == 0) {
-            multi_selection_mode = false;
-            changed_screen = true;
-        }
     } else {
         multi_selection_screenshots.insert(name);
     }
 }
 
-void OnSelectScreenshotTags(bool changed_initial_selection, std::set<tags::TagId> tags) {
+void OnSelectScreenshotTags(bool changed_initial_selection, std::set<tags::tag_ptr> tags) {
     if (changed_initial_selection) {
-        tags::SetScreenshotsTagIds(multi_selection_screenshots, tags);
+        tags::SetScreenshotsTags(multi_selection_screenshots, tags);
     }
     Show();
 }
 
-void OnSelectFilterTags(bool changed_initial_selection, std::set<tags::TagId> tags) { Show(); }
+void OnSelectFilterTags(bool changed_initial_selection, std::set<tags::tag_ptr> tags) { Show(); }
 }  // namespace ui::viewer
