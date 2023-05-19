@@ -12,7 +12,7 @@
 
 namespace ui::tag_editor {
 
-void Show(bool new_tag, tags::tag_ptr existing_tag, void (*edit_callback)(), void (*delete_callback)(tags::tag_ptr));
+void Show(bool new_tag, tags::tag_ptr existing_tag, void (*edit_callback)(std::optional<tags::tag_ptr>), void (*delete_callback)(tags::tag_ptr));
 
 void Input();
 void Render(bool force);

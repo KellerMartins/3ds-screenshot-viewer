@@ -139,7 +139,19 @@ void Close() {
     return_callback(changed_initial_selection, selected);
 }
 
-void OnTagEdited() { Show(top_title, GetSelectedTags(), return_callback); }
+void OnTagEdited(std::optional<tags::tag_ptr> new_tag) {
+    auto selected_tags = GetSelectedTags();
+    bool created_new_tag = new_tag.has_value();
+    if (created_new_tag) {
+        selected_tags.insert(new_tag.value());
+    }
+
+    Show(top_title, selected_tags, return_callback);
+
+    if (created_new_tag) {
+        changed_initial_selection = true;
+    }
+}
 
 void OnTagDeleted(tags::tag_ptr deleted_id) {
     auto selected_tags = GetSelectedTags();

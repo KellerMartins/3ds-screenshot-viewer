@@ -89,7 +89,7 @@ int edited_tag_index;
 tags::tag_ptr original_tag;
 int original_tag_index;
 
-void (*return_edit_callback)();
+void (*return_edit_callback)(std::optional<tags::tag_ptr>);
 void (*return_delete_callback)(tags::tag_ptr);
 bool creating_new_tag;
 bool changed;
@@ -97,7 +97,7 @@ bool changed;
 unsigned int tab = 0;
 unsigned int keyboard_layout = 0;
 
-void Show(bool new_tag, tags::tag_ptr existing_tag, void (*edit_callback)(), void (*delete_callback)(tags::tag_ptr)) {
+void Show(bool new_tag, tags::tag_ptr existing_tag, void (*edit_callback)(std::optional<tags::tag_ptr>), void (*delete_callback)(tags::tag_ptr)) {
     changed = true;
     SetUiFunctions(Input, Render);
 
@@ -119,9 +119,10 @@ void Show(bool new_tag, tags::tag_ptr existing_tag, void (*edit_callback)(), voi
 }
 
 void FinishEditing(bool cancel) {
+    std::optional<tags::tag_ptr> ret = {};
     if (!cancel) {
         if (creating_new_tag)
-            tags::AddTag(edited_tag);
+            ret = tags::AddTag(edited_tag);
         else
             tags::ReplaceTag(original_tag, edited_tag);
 
@@ -129,7 +130,7 @@ void FinishEditing(bool cancel) {
             tags::MoveTag(original_tag_index, edited_tag_index);
         }
     }
-    return_edit_callback();
+    return_edit_callback(ret);
 }
 
 void DeleteTag() {

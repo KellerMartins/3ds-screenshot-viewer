@@ -186,7 +186,11 @@ void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<std::sh
     }
 }
 
-void AddTag(Tag new_tag) { tags.push_back(std::shared_ptr<Tag>(new Tag(new_tag))); }
+std::shared_ptr<const Tag> AddTag(Tag new_tag) {
+    auto ptr = std::shared_ptr<Tag>(new Tag(new_tag));
+    tags.push_back(ptr);
+    return ptr;
+}
 
 void ReplaceTag(std::shared_ptr<const Tag> tag, Tag new_tag) {
     int idx = GetTagIndex(tag);
