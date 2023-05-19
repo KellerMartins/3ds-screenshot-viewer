@@ -20,7 +20,7 @@ const int kMenuBorderRadius = 15;
 
 const int kButtonHeight = 24;
 const int kButtonSpacing = 1;
-const int kButtonTextOffsetY = 3;
+const int kButtonTextOffsetY = -7;
 const int kButtonArrowWidth = 64;
 const int kButtonArrowSize = 16;
 
@@ -34,13 +34,6 @@ const float kTagTextSize = 0.6;
 const float kTagTextOffsetY = 3;
 
 const unsigned int kTagEditTouchHoldTicks = 20;
-
-const u32 clrWhite = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
-const u32 clrBlack = C2D_Color32(0x00, 0x00, 0x00, 0xFF);
-const u32 clrButtons = C2D_Color32(0x7F, 0x7F, 0x7F, 0xFF);
-const u32 clrButtonsDisabled = C2D_Color32(0x5F, 0x5F, 0x5F, 0xFF);
-const u32 clrBackground = C2D_Color32(0x40, 0x40, 0x40, 0xFF);
-const u32 clrOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x7F);
 
 struct TagItem {
     tags::tag_ptr tag;
@@ -272,7 +265,7 @@ void Render(bool force) {
         // Create tag button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 2,
                  kButtonHeight, clrButtons);
-        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight + kButtonTextOffsetY, 0.5, clrBlack, "Add Tag");
+        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight + kButtonTextOffsetY, 1, clrBlack, "+");
     } else {
         // Create tag button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kButtonArrowWidth, kButtonHeight,
@@ -289,7 +282,7 @@ void Render(bool force) {
 
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing * 2 + kButtonArrowWidth, kBottomScreenHeight - kButtonHeight - kButtonSpacing,
                  kMenuWidth - kButtonSpacing * 4 - kButtonArrowWidth * 2, kButtonHeight, clrButtons);
-        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight + kButtonTextOffsetY, 0.5, clrBlack, "Add Tag");
+        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight + kButtonTextOffsetY, 1, clrBlack, "+");
     }
 
     if (SetTargetScreen(TargetScreen::kTop)) {

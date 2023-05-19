@@ -21,6 +21,13 @@ constexpr int kThumbnailWidth = (kTopScreenWidth / kThumbnailDownscale);
 constexpr int kThumbnailHeight = (kTopScreenHeight / kThumbnailDownscale);
 constexpr int kThumbnailSize = (kThumbnailWidth * kThumbnailHeight * 3);
 
+constexpr u32 clrWhite = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
+constexpr u32 clrBlack = C2D_Color32(0x00, 0x00, 0x00, 0xFF);
+constexpr u32 clrButtons = C2D_Color32(0x7F, 0x7F, 0x7F, 0xFF);
+constexpr u32 clrButtonsDisabled = C2D_Color32(0x5F, 0x5F, 0x5F, 0xFF);
+constexpr u32 clrBackground = C2D_Color32(0x40, 0x40, 0x40, 0xFF);
+constexpr u32 clrOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x7F);
+
 enum TargetScreen {
     kTop,
     kTopRight,

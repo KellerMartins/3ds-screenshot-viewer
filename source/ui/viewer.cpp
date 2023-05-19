@@ -33,11 +33,6 @@ const int kTagLineThickness = 4;
 const unsigned int kInputDebounceTicks = 20;
 const unsigned int kInputHoldTicks = 20;
 
-const u32 clrWhite = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
-const u32 clrButtons = C2D_Color32(0x7F, 0x7F, 0x7F, 0xFF);
-const u32 clrBlack = C2D_Color32(0x00, 0x00, 0x00, 0xFF);
-const u32 clrClear = C2D_Color32(0xFF, 0xD8, 0xB0, 0xFF);
-
 std::vector<size_t> filtered_screenshots;
 
 screenshots::Screenshot selected_screenshot;
@@ -325,12 +320,15 @@ void DrawInterface() {
         }
     }
 
-    DrawRect(0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight, clrButtons);
-    DrawRect(kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight, clrButtons);
+    DrawRect(0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight, page_index > 0 ? clrButtons : clrButtonsDisabled);
+    DrawRect(kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight,
+             page_index < GetLastPageIndex() ? clrButtons : clrButtonsDisabled);
     DrawRect(kNavbarArrowWidth + kNavbarButtonsSpacing, kBottomScreenHeight - kNavbarHeight, kNavbarHideButtonWidth, kNavbarHeight, clrButtons);
 
-    DrawLeftArrow(kNavbarIconMargin + kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
-    DrawRightArrow(kBottomScreenWidth - kNavbarIconMargin - kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
+    DrawLeftArrow(kNavbarIconMargin + kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale,
+                  page_index > 0 ? clrBlack : clrBackground);
+    DrawRightArrow(kBottomScreenWidth - kNavbarIconMargin - kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale,
+                   page_index < GetLastPageIndex() ? clrBlack : clrBackground);
     DrawUpArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
 }
 

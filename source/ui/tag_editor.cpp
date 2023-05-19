@@ -64,13 +64,7 @@ const int kDeleteTagButtonTextOffsetY = kDeleteTagButtonOffsetY + 12;
 const int kNavbarHeight = 24;
 const int kNavbarButtonsSpacing = 1;
 
-const u32 clrWhite = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
-const u32 clrBlack = C2D_Color32(0x00, 0x00, 0x00, 0xFF);
-const u32 clrButtons = C2D_Color32(0x7F, 0x7F, 0x7F, 0xFF);
-const u32 clrButtonsDisabled = C2D_Color32(0x5F, 0x5F, 0x5F, 0xFF);
 const u32 clrTagPosHightlight = C2D_Color32(0x4F, 0x4F, 0x4F, 0xFF);
-const u32 clrBackground = C2D_Color32(0x40, 0x40, 0x40, 0xFF);
-const u32 clrOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x7F);
 
 const std::vector<const char*> tab_titles = {"Label", "Color", "Position", "Delete"};
 
