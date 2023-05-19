@@ -184,11 +184,15 @@ void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<std::sh
             screenshot_tags[name].push_back(tag);
         }
     }
+    Save();
 }
 
 std::shared_ptr<const Tag> AddTag(Tag new_tag) {
     auto ptr = std::shared_ptr<Tag>(new Tag(new_tag));
     tags.push_back(ptr);
+
+    Save();
+
     return ptr;
 }
 
@@ -196,6 +200,8 @@ void ReplaceTag(std::shared_ptr<const Tag> tag, Tag new_tag) {
     int idx = GetTagIndex(tag);
     if (idx >= 0) {
         *tags[idx] = new_tag;
+
+        Save();
     }
 }
 void MoveTag(size_t src_idx, size_t dst_idx) {
@@ -206,6 +212,8 @@ void MoveTag(size_t src_idx, size_t dst_idx) {
     auto t = tags[src_idx];
     tags.erase(tags.begin() + src_idx);
     tags.insert(tags.begin() + dst_idx, t);
+
+    Save();
 }
 
 void DeleteTag(std::shared_ptr<const Tag> tag) {
@@ -216,6 +224,8 @@ void DeleteTag(std::shared_ptr<const Tag> tag) {
         for (auto& kv : screenshot_tags) {
             kv.second.erase(std::remove_if(kv.second.begin(), kv.second.end(), [tag](auto t) { return t == tag; }), kv.second.end());
         }
+
+        Save();
     }
 }
 
@@ -223,7 +233,15 @@ const std::set<tags::tag_ptr> GetTagsFilter() { return tags_filter; }
 
 const std::set<tags::tag_ptr> GetHiddenTags() { return hidden_tags; }
 
-void SetTagsFilter(std::set<tags::tag_ptr> tags) { tags_filter = tags; }
+void SetTagsFilter(std::set<tags::tag_ptr> tags) {
+    tags_filter = tags;
 
-void SetHiddenTags(std::set<tags::tag_ptr> tags) { hidden_tags = tags; }
+    Save();
+}
+
+void SetHiddenTags(std::set<tags::tag_ptr> tags) {
+    hidden_tags = tags;
+
+    Save();
+}
 }  // namespace tags
