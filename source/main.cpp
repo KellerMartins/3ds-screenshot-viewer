@@ -25,6 +25,7 @@ int main(int argc, char **argv) {
     }
 
     screenshots::LoadThumbnailsStop();
+    tags::Save();
     ui::Exit();
 
     return 0;

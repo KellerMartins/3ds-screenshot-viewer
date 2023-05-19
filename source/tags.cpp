@@ -18,6 +18,9 @@ namespace tags {
 std::vector<std::shared_ptr<Tag>> tags;
 std::map<std::string, std::vector<std::shared_ptr<const Tag>>> screenshot_tags;
 
+std::set<tags::tag_ptr> tags_filter;
+std::set<tags::tag_ptr> hidden_tags;
+
 std::string color_to_hex_string(u32 x) {
     std::stringstream stream;
     stream << std::setfill('0') << std::setw(sizeof(u32) * 2) << std::hex << x;
@@ -56,8 +59,23 @@ void Save() {
     }
     f << "]\n\n";
 
-    f << "[screenshot_tags]\n";
+    f << "tags_filter = [";
+    size_t i = 0;
+    for (auto it = tags_filter.begin(); it != tags_filter.end(); it++) {
+        f << GetTagIndex(*it) << (i == tags_filter.size() - 1 ? "" : ", ");
+        i++;
+    }
+    f << "]\n";
 
+    f << "hidden_tags = [";
+    i = 0;
+    for (auto it = hidden_tags.begin(); it != hidden_tags.end(); it++) {
+        f << GetTagIndex(*it) << (i == hidden_tags.size() - 1 ? "" : ", ");
+        i++;
+    }
+    f << "]\n\n";
+
+    f << "[screenshot_tags]\n";
     for (auto const& kv : screenshot_tags) {
         f << "  \"" << kv.first << "\" = [";
         for (size_t i = 0; i < kv.second.size(); i++) {
@@ -92,6 +110,22 @@ void Load() {
                             color_from_hex_string(el["color"].as_string()->get()),
                         })));
                     }
+                }
+            });
+        }
+
+        if (toml::array* arr = data["tags_filter"].as_array()) {
+            arr->for_each([](auto&& el) {
+                if constexpr (toml::is_number<decltype(el)>) {
+                    tags_filter.insert(tags[el.get()]);
+                }
+            });
+        }
+
+        if (toml::array* arr = data["hidden_tags"].as_array()) {
+            arr->for_each([](auto&& el) {
+                if constexpr (toml::is_number<decltype(el)>) {
+                    hidden_tags.insert(tags[el.get()]);
                 }
             });
         }
@@ -150,20 +184,14 @@ void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<std::sh
             screenshot_tags[name].push_back(tag);
         }
     }
-
-    Save();
 }
 
-void AddTag(Tag new_tag) {
-    tags.push_back(std::shared_ptr<Tag>(new Tag(new_tag)));
-    Save();
-}
+void AddTag(Tag new_tag) { tags.push_back(std::shared_ptr<Tag>(new Tag(new_tag))); }
 
 void ReplaceTag(std::shared_ptr<const Tag> tag, Tag new_tag) {
     int idx = GetTagIndex(tag);
     if (idx >= 0) {
         *tags[idx] = new_tag;
-        Save();
     }
 }
 void MoveTag(size_t src_idx, size_t dst_idx) {
@@ -174,8 +202,6 @@ void MoveTag(size_t src_idx, size_t dst_idx) {
     auto t = tags[src_idx];
     tags.erase(tags.begin() + src_idx);
     tags.insert(tags.begin() + dst_idx, t);
-
-    Save();
 }
 
 void DeleteTag(std::shared_ptr<const Tag> tag) {
@@ -186,8 +212,14 @@ void DeleteTag(std::shared_ptr<const Tag> tag) {
         for (auto& kv : screenshot_tags) {
             kv.second.erase(std::remove_if(kv.second.begin(), kv.second.end(), [tag](auto t) { return t == tag; }), kv.second.end());
         }
-
-        Save();
     }
 }
+
+const std::set<tags::tag_ptr> GetTagsFilter() { return tags_filter; }
+
+const std::set<tags::tag_ptr> GetHiddenTags() { return hidden_tags; }
+
+void SetTagsFilter(std::set<tags::tag_ptr> tags) { tags_filter = tags; }
+
+void SetHiddenTags(std::set<tags::tag_ptr> tags) { hidden_tags = tags; }
 }  // namespace tags

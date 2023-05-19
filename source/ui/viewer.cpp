@@ -38,8 +38,6 @@ const u32 clrButtons = C2D_Color32(0x7F, 0x7F, 0x7F, 0xFF);
 const u32 clrBlack = C2D_Color32(0x00, 0x00, 0x00, 0xFF);
 const u32 clrClear = C2D_Color32(0xFF, 0xD8, 0xB0, 0xFF);
 
-std::set<tags::tag_ptr> tags_filter;
-std::set<tags::tag_ptr> tags_hide;
 std::vector<size_t> filtered_screenshots;
 
 screenshots::Screenshot selected_screenshot;
@@ -82,7 +80,8 @@ void Show() {
     filtered_screenshots.clear();
     for (size_t i = 0; i < screenshots::Count(); i++) {
         screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(i);
-        if ((tags_filter.size() == 0 || screenshot.has_any_tag(tags_filter)) && !screenshot.has_any_tag(tags_hide)) filtered_screenshots.push_back(i);
+        if ((tags::GetTagsFilter().size() == 0 || screenshot.has_any_tag(tags::GetTagsFilter())) && !screenshot.has_any_tag(tags::GetHiddenTags()))
+            filtered_screenshots.push_back(i);
     }
 }
 
@@ -368,23 +367,23 @@ void DrawTop() {
 void OnSelectScreenshotTags(bool changed_initial_selection, std::set<tags::tag_ptr> tags) {
     if (changed_initial_selection) {
         tags::SetScreenshotsTags(multi_selection_screenshots, tags);
-        multi_selection_mode = false;
     }
     Show();
 }
 
 void OnSelectFilterTags(bool changed_initial_selection, std::set<tags::tag_ptr> tags) {
-    tags_filter = tags;
-    selected_index = 0;
-    page_index = 0;
-    hide_last_image = true;
-
+    if (changed_initial_selection || tags::GetTagsFilter().size() > 0) {
+        tags::SetTagsFilter(tags);
+        selected_index = 0;
+        page_index = 0;
+        hide_last_image = true;
+    }
     Show();
 }
 
 void OnSelectHideTags(bool changed_initial_selection, std::set<tags::tag_ptr> tags) {
     if (changed_initial_selection) {
-        tags_hide = tags;
+        tags::SetHiddenTags(tags);
         selected_index = 0;
         page_index = 0;
         hide_last_image = true;
@@ -399,7 +398,7 @@ void OpenSetTagsMenu() {
     tags_menu::Show("Set screenshot tags", tags::GetScreenshotsTags(multi_selection_screenshots), OnSelectScreenshotTags);
 }
 
-void OpenHideTagsMenu() { tags_menu::Show("Hide with tags", tags_hide, OnSelectHideTags); }
+void OpenHideTagsMenu() { tags_menu::Show("Hide with tags", tags::GetHiddenTags(), OnSelectHideTags); }
 
 void OpenFilterTagsMenu() { tags_menu::Show("Filter by tags", {}, OnSelectFilterTags); }
 
