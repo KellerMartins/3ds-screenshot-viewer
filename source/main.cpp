@@ -10,10 +10,11 @@
 
 int main(int argc, char **argv) {
     settings::Load();
-    ui::Init();
     tags::Load();
 
     screenshots::Init();
+    ui::Init();
+
     screenshots::LoadThumbnailsStart();
 
     while (aptMainLoop()) {

@@ -41,6 +41,8 @@ bool SetTargetScreen(TargetScreen screen);
 
 void DrawRect(float x, float y, float width, float height, u32 color);
 void DrawCircle(float x, float y, float radius, u32 color);
+void DrawUpArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color = C2D_Color32(0x00, 0x00, 0x00, 0xFF));
+void DrawDownArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color = C2D_Color32(0x00, 0x00, 0x00, 0xFF));
 void DrawRightArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color = C2D_Color32(0x00, 0x00, 0x00, 0xFF));
 void DrawLeftArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color = C2D_Color32(0x00, 0x00, 0x00, 0xFF));
 void DrawText(float x, float y, float size, u32 color, std::string text, TextAlignment alignment = TextAlignment::kCenter);

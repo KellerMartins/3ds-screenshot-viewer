@@ -4,9 +4,11 @@
 #include <3ds.h>
 #include <citro2d.h>
 
+#include <set>
 #include <string>
-#include <tags.hpp>
 #include <vector>
+
+#include "tags.hpp"
 
 namespace screenshots {
 struct Screenshot {
@@ -29,6 +31,8 @@ struct ScreenshotInfo {
     C2D_Image thumbnail;
 
     ScreenshotInfo(std::string name, std::vector<tags::tag_ptr>& tags) : name(name), tags(tags), has_thumbnail(false) {}
+    bool has_any_tag(std::set<tags::tag_ptr> tags);
+    bool has_all_tag(std::set<tags::tag_ptr> tags);
 };
 
 void Init();
@@ -37,8 +41,8 @@ void LoadThumbnailsStop();
 
 const screenshots::Screenshot Load(std::size_t index);
 const ScreenshotInfo GetInfo(std::size_t index);
-size_t Size();
-int NumLoadedThumbnails();
+size_t Count();
+size_t NumLoadedThumbnails();
 
 }  // namespace screenshots
 

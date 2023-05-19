@@ -113,12 +113,20 @@ void DrawRect(float x, float y, float width, float height, u32 color) { C2D_Draw
 
 void DrawCircle(float x, float y, float radius, u32 color) { C2D_DrawCircleSolid(x, y, 0, radius, color); }
 
-void DrawRightArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
-    C2D_DrawTriangle(x - scale / 4 + 3, y + scale / 2, color, x - scale / 4 + 3, y - scale / 2, color, x + scale / 2, y, color, 0);
+void DrawUpArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
+    C2D_DrawTriangle(x + scale / 2, y + scale / 4, color, x - scale / 2 - 0.5, y + scale / 4, color, x, y - scale / 4, color, 0);
+}
+
+void DrawDownArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
+    C2D_DrawTriangle(x + scale / 2, y - scale / 4, color, x - scale / 2 - 0.5, y - scale / 4, color, x, y + scale / 4, color, 0);
 }
 
 void DrawLeftArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
     C2D_DrawTriangle(x + scale / 4 - 3, y + scale / 2, color, x + scale / 4 - 3, y - scale / 2, color, x - scale / 2, y, color, 0);
+}
+
+void DrawRightArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
+    C2D_DrawTriangle(x - scale / 4 + 3, y + scale / 2, color, x - scale / 4 + 3, y - scale / 2, color, x + scale / 2, y, color, 0);
 }
 
 void DrawText(float x, float y, float size, u32 color, std::string text, TextAlignment alignment) {

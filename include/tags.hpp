@@ -19,10 +19,12 @@ using tag_ptr = std::shared_ptr<const Tag>;
 
 void Load();
 void Save();
+
+tag_ptr Get(size_t index);
 std::vector<tag_ptr>& GetScreenshotTags(std::string screenshot_name);
 std::set<tag_ptr> GetScreenshotsTags(std::set<std::string> screenshot_names);
 int GetTagIndex(std::shared_ptr<const Tag> tag);
-tag_ptr Get(size_t index);
+
 size_t Count();
 
 void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_ptr> tags);

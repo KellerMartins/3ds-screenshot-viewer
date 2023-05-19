@@ -163,7 +163,20 @@ const Screenshot Load(std::size_t index) {
     return screenshot;
 }
 const ScreenshotInfo GetInfo(std::size_t index) { return screenshots[index]; }
-size_t Size() { return screenshots.size(); }
-int NumLoadedThumbnails() { return loaded_thumbs; }
+size_t Count() { return screenshots.size(); }
+size_t NumLoadedThumbnails() { return loaded_thumbs; }
 
+bool ScreenshotInfo::has_any_tag(std::set<tags::tag_ptr> tags) {
+    for (auto &tag : this->tags) {
+        if (tags.contains(tag)) return true;
+    }
+    return false;
+}
+
+bool ScreenshotInfo::has_all_tag(std::set<tags::tag_ptr> tags) {
+    for (auto &tag : tags) {
+        if (std::find(this->tags.begin(), this->tags.end(), tag) == this->tags.end()) return false;
+    }
+    return true;
+}
 }  // namespace screenshots
