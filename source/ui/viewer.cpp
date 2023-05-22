@@ -348,7 +348,10 @@ void DrawTop() {
     ClearTargetScreen(TargetScreen::kTop, clrBlack);
     gfxSet3D(selected_screenshot.is_3d && !hide_last_image);
 
-    if (hide_last_image) return;
+    if (hide_last_image) {
+        DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrBackground);
+        return;
+    }
 
     C2D_DrawImageAt(selected_screenshot.top, selected_screenshot.is_3d ? -slider * settings::ExtraStereoOffset() : 0, 0, 0);
 
@@ -365,6 +368,7 @@ void DrawTop() {
 void OnSelectScreenshotTags(bool changed_initial_selection, std::set<tags::tag_ptr> tags) {
     if (changed_initial_selection) {
         tags::SetScreenshotsTags(multi_selection_screenshots, tags);
+        multi_selection_screenshots.clear();
     }
     Show();
 }
@@ -375,6 +379,7 @@ void OnSelectFilterTags(bool changed_initial_selection, std::set<tags::tag_ptr> 
         selected_index = 0;
         page_index = 0;
         hide_last_image = true;
+        multi_selection_screenshots.clear();
     }
     Show();
 }
@@ -385,7 +390,8 @@ void OnSelectHideTags(bool changed_initial_selection, std::set<tags::tag_ptr> ta
         selected_index = 0;
         page_index = 0;
         hide_last_image = true;
-    }
+        multi_selection_screenshots.clear();
+        }
     Show();
 }
 
