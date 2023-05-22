@@ -75,7 +75,7 @@ void Show() {
     filtered_screenshots.clear();
     for (size_t i = 0; i < screenshots::Count(); i++) {
         screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(i);
-        if ((tags::GetTagsFilter().size() == 0 || screenshot.has_any_tag(tags::GetTagsFilter())) && !screenshot.has_any_tag(tags::GetHiddenTags()))
+        if ((tags::GetTagsFilter().size() == 0 || screenshot.has_all_tag(tags::GetTagsFilter())) && !screenshot.has_any_tag(tags::GetHiddenTags()))
             filtered_screenshots.push_back(i);
     }
 }
