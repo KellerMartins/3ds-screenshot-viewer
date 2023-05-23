@@ -105,6 +105,7 @@ void Show(bool new_tag, tags::tag_ptr existing_tag, void (*edit_callback)(std::o
     original_tag = existing_tag;
     return_edit_callback = edit_callback;
     return_delete_callback = delete_callback;
+    keyboard_layout = 0;
     tab = 0;
 
     if (creating_new_tag) {
@@ -214,6 +215,9 @@ void TouchDownAction() {
         const float spacebar_width = kBottomScreenWidth - key_x - kEditorButtonSpacing - kKeyboardLayoutKeyWidth - kEditorButtonSpacing;
         if (TouchedInRect(touch, key_x, key_y, spacebar_width, kKeyboardKeyHeight)) {
             edited_tag.name += " ";
+            if (keyboard_layout == 1) {
+                keyboard_layout = 0;
+            }
             changed = true;
         }
 
