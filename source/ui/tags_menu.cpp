@@ -83,19 +83,23 @@ struct TagRow {
 
 std::string top_title;
 std::vector<TagRow> tag_rows;
+bool can_create_tags;
 void (*return_callback)(bool, std::set<tags::tag_ptr>);
+
 unsigned int row_offset = 0;
 unsigned int ticks_touch_held = 0;
+
 touchPosition touch;
 bool touched_down;
 bool changed_initial_selection;
 bool changed;
 
-void Show(std::string title, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, std::set<tags::tag_ptr>)) {
+void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, std::set<tags::tag_ptr>)) {
     changed = true;
     SetUiFunctions(Input, Render);
 
     top_title = title;
+    can_create_tags = allow_create_tag;
     return_callback = callback;
     changed_initial_selection = false;
     touched_down = false;
@@ -146,7 +150,7 @@ void OnTagEdited(std::optional<tags::tag_ptr> new_tag) {
         selected_tags.insert(new_tag.value());
     }
 
-    Show(top_title, selected_tags, return_callback);
+    Show(top_title, can_create_tags, selected_tags, return_callback);
 
     if (created_new_tag) {
         changed_initial_selection = true;
@@ -159,7 +163,7 @@ void OnTagDeleted(tags::tag_ptr deleted_id) {
         selected_tags.erase(selected_tags.find(deleted_id));
     }
 
-    Show(top_title, selected_tags, return_callback);
+    Show(top_title, can_create_tags, selected_tags, return_callback);
 }
 
 void Input() {
@@ -205,13 +209,12 @@ void Input() {
             changed = true;
         }
 
-        // Create tag
+        // Close menu
         if ((tag_rows.size() <= 7 && TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing,
                                                    kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 2, kButtonHeight)) ||
             TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing * 2 + kButtonArrowWidth,
                           kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 4 - kButtonArrowWidth * 2, kButtonHeight)) {
-            tag_editor::Show(true, 0, OnTagEdited, OnTagDeleted);
-            changed = true;
+            Close();
         }
     }
 
@@ -221,14 +224,21 @@ void Input() {
         else
             ticks_touch_held = std::min(kTagEditTouchHoldTicks, ticks_touch_held + 1);
 
-        float y = kTagsPositionY;
-        for (size_t i = row_offset; i < tag_rows.size() && i - row_offset < kTagRows; i++) {
-            TagItem* touched_tag = tag_rows[i].touched(y, touch);
-            if (ticks_touch_held == kTagEditTouchHoldTicks && touched_tag != nullptr) {
-                tag_editor::Show(false, touched_tag->tag, OnTagEdited, OnTagDeleted);
-                break;
+        if (ticks_touch_held == kTagEditTouchHoldTicks) {
+            float y = kTagsPositionY;
+            for (size_t i = row_offset; i < tag_rows.size() && i - row_offset < kTagRows; i++) {
+                TagItem* touched_tag = tag_rows[i].touched(y, touch);
+                if (touched_tag != nullptr) {
+                    tag_editor::Show(false, touched_tag->tag, OnTagEdited, OnTagDeleted);
+                    return;
+                }
+                y += kTagRowOffsetY;
             }
-            y += kTagRowOffsetY;
+
+            // Touched and held in the empty area of the menu
+            if (can_create_tags && TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - kMenuHeight, kMenuWidth, kMenuHeight)) {
+                tag_editor::Show(true, 0, OnTagEdited, OnTagDeleted);
+            }
         }
     }
 
@@ -242,7 +252,7 @@ void Input() {
                 touched_tag->selected = !touched_tag->selected;
                 changed = true;
                 changed_initial_selection = true;
-                break;
+                return;
             }
             y += kTagRowOffsetY;
         }
@@ -274,38 +284,45 @@ void Render(bool force) {
     }
 
     if (tag_rows.size() <= 7) {
-        // Create tag button
+        // Close menu button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 2,
                  kButtonHeight, clrButtons);
-        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight + kButtonTextOffsetY, 1, clrBlack, "+");
+        DrawDownArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight / 2, kButtonArrowSize);
+
+        if (tags::Count() == 0 && can_create_tags) {
+            DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 - 9, 0.8, clrButtons, "Touch and hold here");
+            DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 + 9, 0.8, clrButtons, "to create a tag");
+        }
     } else {
-        // Create tag button
+        // Navigation arrows
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kButtonArrowWidth, kButtonHeight,
                  row_offset > 0 ? clrButtons : clrButtonsDisabled);
         DrawRect(kBottomScreenWidth - ((kBottomScreenWidth - kMenuWidth) / 2) - kButtonArrowWidth - kButtonSpacing,
                  kBottomScreenHeight - kButtonHeight - kButtonSpacing, kButtonArrowWidth, kButtonHeight,
                  row_offset + kTagRows < tag_rows.size() ? clrButtons : clrButtonsDisabled);
 
-        // Navigation arrows
         DrawLeftArrow((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing + kButtonArrowWidth / 2, kBottomScreenHeight - kButtonHeight / 2, kButtonArrowSize,
                       row_offset > 0 ? clrBlack : clrBackground);
         DrawRightArrow(kBottomScreenWidth - ((kBottomScreenWidth - kMenuWidth) / 2) - kButtonArrowWidth / 2, kBottomScreenHeight - kButtonHeight / 2,
                        kButtonArrowSize, row_offset + kTagRows < tag_rows.size() ? clrBlack : clrBackground);
 
+        // Close menu button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing * 2 + kButtonArrowWidth, kBottomScreenHeight - kButtonHeight - kButtonSpacing,
                  kMenuWidth - kButtonSpacing * 4 - kButtonArrowWidth * 2, kButtonHeight, clrButtons);
-        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight + kButtonTextOffsetY, 1, clrBlack, "+");
+        DrawDownArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight / 2, kButtonArrowSize);
     }
 
     if (SetTargetScreen(TargetScreen::kTop)) {
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, top_title);
-        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite, "Touch and hold a tag to edit");
+        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite,
+                 can_create_tags ? "Touch and hold the menu to create a tag, touch and hold a tag to edit" : "Touch and hold a tag to edit");
 
         SetTargetScreen(TargetScreen::kTopRight);
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, top_title);
-        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite, "Touch and hold a tag to edit");
+        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite,
+                 can_create_tags ? "Touch and hold the menu to create a tag, touch and hold a tag to edit" : "Touch and hold a tag to edit");
     }
 
     changed = false;
