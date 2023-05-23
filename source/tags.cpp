@@ -225,6 +225,14 @@ void DeleteTag(std::shared_ptr<const Tag> tag) {
             kv.second.erase(std::remove_if(kv.second.begin(), kv.second.end(), [tag](auto t) { return t == tag; }), kv.second.end());
         }
 
+        if (tags_filter.contains(tag)) {
+            tags_filter.erase(tag);
+        }
+
+        if (hidden_tags.contains(tag)) {
+            hidden_tags.erase(tag);
+        }
+
         Save();
     }
 }
