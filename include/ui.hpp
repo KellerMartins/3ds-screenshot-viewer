@@ -37,6 +37,7 @@ enum TargetScreen {
 enum TextAlignment { kLeft, kCenter, kRight };
 
 void Init();
+void Start();
 void Exit();
 
 void Input();

@@ -3,17 +3,10 @@
 #include <3ds.h>
 #include <citro2d.h>
 #include <citro3d.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 #include <algorithm>
-#include <bit>
-#include <cstring>
+#include <atomic>
 #include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -31,13 +24,29 @@ enum SCRS_TYPE {
     BOTTOM = 2,
 };
 
+const int kStackSize = (4 * 1024);
+
 std::string suffixes[] = {"_top.bmp", "_top_right.bmp", "_bot.bmp"};
 
 std::vector<ScreenshotInfo> screenshots;
-int loaded_thumbs = 0;
 
-volatile bool run_thread = true;
+std::atomic<bool> run_thread = true;
+std::atomic<int> loaded_thumbs = 0;
+
+std::atomic<size_t> last_screenshot_index = std::numeric_limits<size_t>::max();
+std::atomic<size_t> loading_screenshot_index = 0;
+size_t next_screenshot_index = std::numeric_limits<size_t>::max() - 1;
+
+// Use a screenshot for loading and another for returning to the callback
+std::shared_ptr<Screenshot> screenshot_buffer[2];
+constexpr int num_buffers = (sizeof(screenshot_buffer) / sizeof(screenshot_buffer[0]));
+std::atomic<int> current_buffer = 0;
+
+void (*load_screenshot_callback)(screenshot_ptr) = nullptr;
+
 Thread thumbnailThread;
+Thread loadScreenshotThread;
+Handle loadScreenshotRequest;
 
 C2D_Image CreateImage(u16 width, u16 height) {
     C3D_Tex *tex = new C3D_Tex;
@@ -62,7 +71,7 @@ C2D_Image CreateImage(u16 width, u16 height) {
     return C2D_Image({tex, subtex});
 }
 
-void ThreadThumbnails(void *arg) {
+void ThreadLoadThumbnails(void *arg) {
     for (size_t i = 0; i < screenshots.size() && run_thread; i++) {
         screenshots[i].thumbnail = CreateImage(ui::kThumbnailWidth, ui::kThumbnailHeight);
 
@@ -70,7 +79,45 @@ void ThreadThumbnails(void *arg) {
             loadbmp_to_texture(screenshots[i].path_top, screenshots[i].thumbnail.tex, ui::kThumbnailWidth, ui::kThumbnailHeight, ui::kThumbnailDownscale);
         screenshots[i].has_thumbnail = !error;
 
-        loaded_thumbs++;
+        loaded_thumbs = loaded_thumbs + 1;
+    }
+}
+
+void ThreadLoadScreenshot(void *arg) {
+    while (run_thread) {
+        svcWaitSynchronization(loadScreenshotRequest, U64_MAX);
+        svcClearEvent(loadScreenshotRequest);
+
+        size_t index = loading_screenshot_index;
+        if (index != last_screenshot_index) {
+            std::shared_ptr<Screenshot> screenshot = screenshot_buffer[current_buffer];
+
+            unsigned int error;
+            if (screenshots[index].path_top_right.size() > 0) {
+                error = loadbmp_to_texture(screenshots[index].path_top_right, screenshot->top_right.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
+                if (error) {
+                    screenshot->is_3d = false;
+                } else {
+                    screenshot->is_3d = true;
+                }
+            } else {
+                screenshot->is_3d = false;
+            }
+
+            error = loadbmp_to_texture(screenshots[index].path_top, screenshot->top.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
+            if (error) {
+                memset(screenshot->top_right.tex->data, 0, screenshot->top_right.tex->size);
+                memset(screenshot->top.tex->data, 0, screenshot->top.tex->size);
+                screenshot->is_3d = false;
+            }
+
+            error = loadbmp_to_texture(screenshots[index].path_bottom, screenshot->bottom.tex, ui::kBottomScreenWidth, ui::kBottomScreenHeight);
+            if (error) {
+                memset(screenshot->bottom.tex->data, 0, screenshot->bottom.tex->size);
+            }
+
+            last_screenshot_index = index;
+        }
     }
 }
 
@@ -112,56 +159,55 @@ void Init() {
             }
         }
     }
-}
 
-#define STACKSIZE (4 * 1024)
-void LoadThumbnailsStart() {
+    for (int i = 0; i < num_buffers; i++) {
+        screenshot_buffer[i] = std::shared_ptr<Screenshot>(new Screenshot({
+            false,
+            CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
+            CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
+            CreateImage(ui::kBottomScreenWidth, ui::kBottomScreenHeight),
+        }));
+    }
+
     s32 prio = 0;
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
+    svcCreateEvent(&loadScreenshotRequest, RESET_ONESHOT);
     run_thread = true;
-    thumbnailThread = threadCreate(ThreadThumbnails, nullptr, STACKSIZE, prio - 1, -2, false);
+
+    thumbnailThread = threadCreate(ThreadLoadThumbnails, nullptr, kStackSize, prio - 1, -2, false);
+    loadScreenshotThread = threadCreate(ThreadLoadScreenshot, nullptr, kStackSize, prio - 1, -2, false);
+    svcSignalEvent(loadScreenshotRequest);
 }
 
-void LoadThumbnailsStop() {
+void Exit() {
     run_thread = false;
     threadJoin(thumbnailThread, U64_MAX);
     threadFree(thumbnailThread);
+    svcSignalEvent(loadScreenshotRequest);
+    threadJoin(loadScreenshotThread, U64_MAX);
+    threadFree(loadScreenshotThread);
 }
 
-const Screenshot Load(std::size_t index) {
-    static Screenshot screenshot = Screenshot({
-        false,
-        CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
-        CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
-        CreateImage(ui::kBottomScreenWidth, ui::kBottomScreenHeight),
-    });
-
-    unsigned int error;
-    if (screenshots[index].path_top_right.size() > 0) {
-        error = loadbmp_to_texture(screenshots[index].path_top_right, screenshot.top_right.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
-        if (error) {
-            screenshot.is_3d = false;
-        } else {
-            screenshot.is_3d = true;
+void Update() {
+    if (load_screenshot_callback != nullptr) {
+        if (next_screenshot_index == last_screenshot_index) {
+            load_screenshot_callback(screenshot_buffer[current_buffer]);
+            load_screenshot_callback = nullptr;
+            current_buffer = (current_buffer + 1) % num_buffers;
+        } else if (loading_screenshot_index == last_screenshot_index) {
+            loading_screenshot_index = next_screenshot_index;
+            svcSignalEvent(loadScreenshotRequest);
         }
-    } else {
-        screenshot.is_3d = false;
     }
-
-    error = loadbmp_to_texture(screenshots[index].path_top, screenshot.top.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
-    if (error) {
-        memset(screenshot.top_right.tex->data, 0, screenshot.top_right.tex->size);
-        memset(screenshot.top.tex->data, 0, screenshot.top.tex->size);
-        screenshot.is_3d = false;
-    }
-
-    error = loadbmp_to_texture(screenshots[index].path_bottom, screenshot.bottom.tex, ui::kBottomScreenWidth, ui::kBottomScreenHeight);
-    if (error) {
-        memset(screenshot.bottom.tex->data, 0, screenshot.bottom.tex->size);
-    }
-
-    return screenshot;
 }
+
+void Load(std::size_t index, void (*callback)(screenshot_ptr)) {
+    if (index == next_screenshot_index) return;
+
+    next_screenshot_index = index;
+    load_screenshot_callback = callback;
+}
+
 const ScreenshotInfo GetInfo(std::size_t index) { return screenshots[index]; }
 size_t Count() { return screenshots.size(); }
 size_t NumLoadedThumbnails() { return loaded_thumbs; }

@@ -37,7 +37,7 @@ const u32 clrScreenshotOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x9F);
 
 std::vector<size_t> filtered_screenshots;
 
-screenshots::Screenshot selected_screenshot;
+screenshots::screenshot_ptr selected_screenshot = nullptr;
 std::set<std::string> multi_selection_screenshots;
 unsigned int selected_index = 0;
 unsigned int page_index = 0;
@@ -60,6 +60,7 @@ unsigned int GetLastPageIndex() { return GetPageIndex(filtered_screenshots.size(
 void DrawBottom();
 void DrawTop();
 
+void OnLoadScreenshot(screenshots::screenshot_ptr screenshot);
 void OnSelectScreenshotTags(bool, std::set<tags::tag_ptr>);
 void OnSelectFilterTags(bool, std::set<tags::tag_ptr>);
 void OnSelectHideTags(bool, std::set<tags::tag_ptr>);
@@ -284,8 +285,7 @@ void Input() {
     }
 
     if (changed_selection && ticks_since_last_input >= kInputDebounceTicks) {
-        selected_screenshot = screenshots::Load(filtered_screenshots[selected_index]);
-        hide_last_image = false;
+        screenshots::Load(filtered_screenshots[selected_index], OnLoadScreenshot);
         changed_selection = false;
         changed_screen = true;
         ticks_since_last_input = 0;
@@ -386,32 +386,38 @@ void DrawBottom() {
 
     if (show_ui)
         DrawInterface();
-    else
-        C2D_DrawImageAt(selected_screenshot.bottom, 0, 0, 0);
+    else if (selected_screenshot != nullptr)
+        C2D_DrawImageAt(selected_screenshot->bottom, 0, 0, 0);
 }
 
 void DrawTop() {
     if (!SetTargetScreen(TargetScreen::kTop)) return;
 
     ClearTargetScreen(TargetScreen::kTop, clrBlack);
-    gfxSet3D(selected_screenshot.is_3d && !hide_last_image);
 
-    if (hide_last_image) {
+    if (hide_last_image || selected_screenshot == nullptr) {
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrBackground);
         return;
     }
 
-    C2D_DrawImageAt(selected_screenshot.top, selected_screenshot.is_3d ? -slider * settings::ExtraStereoOffset() : 0, 0, 0);
+    gfxSet3D(selected_screenshot->is_3d && !hide_last_image);
+    C2D_DrawImageAt(selected_screenshot->top, selected_screenshot->is_3d ? -slider * settings::ExtraStereoOffset() : 0, 0, 0);
 
-    if (selected_screenshot.is_3d) {
+    if (selected_screenshot->is_3d) {
         SetTargetScreen(TargetScreen::kTopRight);
         ClearTargetScreen(TargetScreen::kTopRight, clrBlack);
 
-        C2D_DrawImageAt(selected_screenshot.top_right, slider * settings::ExtraStereoOffset(), 0, 0);
+        C2D_DrawImageAt(selected_screenshot->top_right, slider * settings::ExtraStereoOffset(), 0, 0);
     }
 }
 
-// Misc. functions
+// Callbacks
+
+void OnLoadScreenshot(screenshots::screenshot_ptr screenshot) {
+    selected_screenshot = screenshot;
+    hide_last_image = false;
+    changed_screen = true;
+}
 
 void OnSelectScreenshotTags(bool changed_initial_selection, std::set<tags::tag_ptr> tags) {
     if (changed_initial_selection) {
@@ -442,6 +448,8 @@ void OnSelectHideTags(bool changed_initial_selection, std::set<tags::tag_ptr> ta
     }
     Show();
 }
+
+// Misc. functions
 
 void OpenSetTagsMenu() {
     if (!multi_selection_mode) {

@@ -37,9 +37,9 @@ void Init() {
     C2D_Prepare();
 
     if (settings::ShowConsole()) consoleInit(GFX_TOP, NULL);
-
-    viewer::Show();
 }
+
+void Start() { viewer::Show(); }
 
 void Exit() {
     C2D_TextBufDelete(dynamicBuf);

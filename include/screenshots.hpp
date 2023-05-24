@@ -4,6 +4,7 @@
 #include <3ds.h>
 #include <citro2d.h>
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -35,11 +36,13 @@ struct ScreenshotInfo {
     bool has_all_tag(std::set<tags::tag_ptr> tags);
 };
 
-void Init();
-void LoadThumbnailsStart();
-void LoadThumbnailsStop();
+using screenshot_ptr = std::shared_ptr<const Screenshot>;
 
-const screenshots::Screenshot Load(std::size_t index);
+void Init();
+void Update();
+void Exit();
+
+void Load(std::size_t index, void (*callback)(screenshot_ptr));
 const ScreenshotInfo GetInfo(std::size_t index);
 size_t Count();
 size_t NumLoadedThumbnails();

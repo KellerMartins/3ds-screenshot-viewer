@@ -12,19 +12,20 @@ int main(int argc, char **argv) {
     settings::Load();
     tags::Load();
 
-    screenshots::Init();
     ui::Init();
+    screenshots::Init();
 
-    screenshots::LoadThumbnailsStart();
-
+    ui::Start();
     while (aptMainLoop()) {
+        screenshots::Update();
+
         ui::Input();
         if (ui::PressedExit()) break;
 
         ui::Render();
     }
 
-    screenshots::LoadThumbnailsStop();
+    screenshots::Exit();
     ui::Exit();
 
     return 0;
