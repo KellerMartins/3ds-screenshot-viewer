@@ -237,6 +237,7 @@ void Input() {
     if (keysDown() & KEY_B) {
         if (multi_selection_mode) {
             multi_selection_mode = false;
+            multi_selection_screenshots.clear();
         }
         changed_screen = true;
     }
@@ -311,7 +312,7 @@ void DrawInterface() {
 
             screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(filtered_screenshots[i]);
 
-            bool is_selected_multi = multi_selection_screenshots.contains(screenshot.name);
+            bool is_selected_multi = multi_selection_mode && multi_selection_screenshots.contains(screenshot.name);
             float offset = is_selected_multi ? kSelectionOutline : 0;
 
             if (screenshot.has_thumbnail) {
@@ -355,7 +356,7 @@ void DrawInterface() {
 
         screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(filtered_screenshots[selected_index]);
 
-        bool is_selected_multi = multi_selection_screenshots.contains(screenshot.name);
+        bool is_selected_multi = multi_selection_mode && multi_selection_screenshots.contains(screenshot.name);
         float offset = is_selected_multi ? kSelectionOutline : 0;
         float x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - kSelectionOutline - offset;
         float y = kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r - kSelectionOutline - offset;
