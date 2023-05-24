@@ -203,7 +203,7 @@ void Input() {
         changed_selection = true;
     }
 
-    if (keysDown() & KEY_DUP && selected_index - kNCols >= 0) {
+    if (keysDown() & KEY_DUP && selected_index >= kNCols) {
         if (page_index == GetPageIndex(selected_index)) {
             selected_index -= kNCols;
             page_index = GetPageIndex(selected_index);
