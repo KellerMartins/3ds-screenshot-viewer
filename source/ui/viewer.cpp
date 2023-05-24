@@ -242,11 +242,11 @@ void Input() {
         changed_screen = true;
     }
 
-    if (keysDown() & KEY_Y) {
+    if (keysDown() & KEY_X) {
         OpenFilterTagsMenu();
     }
 
-    if (keysDown() & KEY_X) {
+    if (keysDown() & KEY_Y) {
         OpenHideTagsMenu();
     }
 

@@ -174,7 +174,7 @@ void OnTagDeleted(tags::tag_ptr deleted_id) {
 }
 
 void Input() {
-    if ((keysDown() & KEY_SELECT) || (keysDown() & KEY_B) || (keysDown() & KEY_X)) {
+    if ((keysDown() & KEY_SELECT) || (keysDown() & KEY_B) || (keysDown() & KEY_X) || (keysDown() & KEY_Y)) {
         Close();
     }
 
