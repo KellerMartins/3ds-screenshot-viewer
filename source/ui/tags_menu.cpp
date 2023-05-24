@@ -3,7 +3,6 @@
 
 #include <citro2d.h>
 
-#include <iostream>
 #include <numeric>
 #include <vector>
 
@@ -14,8 +13,9 @@
 namespace ui::tags_menu {
 
 const int kMenuWidth = 300;
-const int kMenuHeight = 197;
-const int kMenuPositionY = kBottomScreenHeight - kMenuHeight;
+const int kMenuMaxHeight = 170;
+const int kMenuMinRows = 3;
+const int kMenuPositionY = kBottomScreenHeight - kMenuMaxHeight;
 const int kMenuBorderRadius = 15;
 
 const int kButtonHeight = 24;
@@ -24,11 +24,11 @@ const int kButtonTextOffsetY = -7;
 const int kButtonArrowWidth = 64;
 const int kButtonArrowSize = 16;
 
-const int kTagsPositionY = kMenuPositionY + 6;
+const int kTagsMaxPositionY = kMenuPositionY;
 const int kTagHeight = 25;
 const int kTagPadding = kTagHeight / 2;
 const int kTagMargin = 2;
-const int kTagRows = 6;
+const int kTagRows = 5;
 const int kTagRowOffsetY = kTagHeight + kTagMargin;
 const float kTagTextSize = 0.6;
 const float kTagTextOffsetY = 3;
@@ -88,6 +88,8 @@ void (*return_callback)(bool, std::set<tags::tag_ptr>);
 
 unsigned int row_offset = 0;
 unsigned int ticks_touch_held = 0;
+float reduced_menu_height = 0;
+float reduced_menu_tags_offset = 0;
 
 touchPosition touch;
 bool touched_down;
@@ -117,6 +119,11 @@ void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> sele
         tag_rows.back().items.push_back(item);
         tag_rows.back().width += item.width;
     }
+
+    int num_rows = tag_rows.size();
+    reduced_menu_height = tag_rows.size() < kTagRows ? (kTagRows - std::max(kMenuMinRows, num_rows)) * (kTagHeight + kTagMargin) : 0;
+    reduced_menu_tags_offset =
+        reduced_menu_height + ((kMenuMaxHeight - reduced_menu_height - kButtonHeight) - std::min(num_rows, kTagRows) * (kTagHeight + kTagMargin)) / 2;
 }
 
 std::set<tags::tag_ptr> GetSelectedTags() {
@@ -190,7 +197,8 @@ void Input() {
         touched_down = true;
 
         // Touched outside the menu
-        if (!TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - kMenuHeight, kMenuWidth, kMenuHeight)) {
+        if (!TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - (kMenuMaxHeight - reduced_menu_height), kMenuWidth,
+                           (kMenuMaxHeight - reduced_menu_height))) {
             Close();
         }
 
@@ -225,7 +233,7 @@ void Input() {
             ticks_touch_held = std::min(kTagEditTouchHoldTicks, ticks_touch_held + 1);
 
         if (ticks_touch_held == kTagEditTouchHoldTicks) {
-            float y = kTagsPositionY;
+            float y = kTagsMaxPositionY + reduced_menu_tags_offset;
             for (size_t i = row_offset; i < tag_rows.size() && i - row_offset < kTagRows; i++) {
                 TagItem* touched_tag = tag_rows[i].touched(y, touch);
                 if (touched_tag != nullptr) {
@@ -236,7 +244,8 @@ void Input() {
             }
 
             // Touched and held in the empty area of the menu
-            if (can_create_tags && TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - kMenuHeight, kMenuWidth, kMenuHeight)) {
+            if (can_create_tags && TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - (kMenuMaxHeight - reduced_menu_height),
+                                                 kMenuWidth, (kMenuMaxHeight - reduced_menu_height))) {
                 tag_editor::Show(true, 0, OnTagEdited, OnTagDeleted);
             }
         }
@@ -245,7 +254,7 @@ void Input() {
     if (keysUp() & KEY_TOUCH && touched_down) {
         touched_down = false;
 
-        float y = kTagsPositionY;
+        float y = kTagsMaxPositionY + reduced_menu_tags_offset;
         for (size_t i = row_offset; i < tag_rows.size() && i - row_offset < kTagRows; i++) {
             TagItem* touched_tag = tag_rows[i].touched(y, touch);
             if (touched_tag != nullptr) {
@@ -267,17 +276,17 @@ void Render(bool force) {
     // Menu overlay
     SetTargetScreen(TargetScreen::kBottom);
     DrawRect(0, 0, kBottomScreenWidth, kBottomScreenHeight, clrOverlay);
-    DrawRect((kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - kMenuHeight + kMenuBorderRadius, kMenuWidth, kMenuHeight - kMenuBorderRadius,
-             clrBackground);
-    DrawCircle((kBottomScreenWidth - kMenuWidth) / 2 + kMenuBorderRadius, kBottomScreenHeight - kMenuHeight + kMenuBorderRadius, kMenuBorderRadius,
-               clrBackground);
-    DrawCircle((kBottomScreenWidth - kMenuWidth) / 2 + kMenuWidth - kMenuBorderRadius, kBottomScreenHeight - kMenuHeight + kMenuBorderRadius, kMenuBorderRadius,
-               clrBackground);
-    DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kMenuBorderRadius, kBottomScreenHeight - kMenuHeight, kMenuWidth - kMenuBorderRadius * 2,
-             kMenuBorderRadius, clrBackground);
+    DrawRect((kBottomScreenWidth - kMenuWidth) / 2, kBottomScreenHeight - (kMenuMaxHeight - reduced_menu_height) + kMenuBorderRadius, kMenuWidth,
+             (kMenuMaxHeight - reduced_menu_height) - kMenuBorderRadius, clrBackground);
+    DrawCircle((kBottomScreenWidth - kMenuWidth) / 2 + kMenuBorderRadius, kBottomScreenHeight - (kMenuMaxHeight - reduced_menu_height) + kMenuBorderRadius,
+               kMenuBorderRadius, clrBackground);
+    DrawCircle((kBottomScreenWidth - kMenuWidth) / 2 + kMenuWidth - kMenuBorderRadius,
+               kBottomScreenHeight - (kMenuMaxHeight - reduced_menu_height) + kMenuBorderRadius, kMenuBorderRadius, clrBackground);
+    DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kMenuBorderRadius, kBottomScreenHeight - (kMenuMaxHeight - reduced_menu_height),
+             kMenuWidth - kMenuBorderRadius * 2, kMenuBorderRadius, clrBackground);
 
     // Tags
-    float y = kTagsPositionY;
+    float y = kTagsMaxPositionY + reduced_menu_tags_offset;
     for (size_t i = row_offset; i < tag_rows.size() && i - row_offset < kTagRows; i++) {
         tag_rows[i].draw(y);
         y += kTagRowOffsetY;
@@ -290,8 +299,8 @@ void Render(bool force) {
         DrawDownArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight / 2, kButtonArrowSize);
 
         if (tags::Count() == 0 && can_create_tags) {
-            DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 - 9, 0.8, clrButtons, "Touch and hold here");
-            DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 + 9, 0.8, clrButtons, "to create a tag");
+            DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 + 29, 0.8, clrButtons, "Touch and hold here");
+            DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 + 47, 0.8, clrButtons, "to create a tag");
         }
     } else {
         // Navigation arrows
