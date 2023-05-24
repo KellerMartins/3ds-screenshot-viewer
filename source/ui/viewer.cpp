@@ -4,7 +4,6 @@
 #include <citro2d.h>
 
 #include <algorithm>
-#include <iostream>
 #include <set>
 
 #include "screenshots.hpp"
@@ -183,26 +182,44 @@ void Input() {
     }
 
     if (keysDown() & KEY_DLEFT) {
-        selected_index = std::max(static_cast<unsigned int>(1), selected_index) - 1;
-        page_index = GetPageIndex(selected_index);
+        if (page_index == GetPageIndex(selected_index)) {
+            selected_index = std::max(static_cast<unsigned int>(1), selected_index) - 1;
+            page_index = GetPageIndex(selected_index);
+        } else {
+            selected_index = page_index * kNRows * kNCols;
+        }
         changed_selection = true;
     }
 
     if (keysDown() & KEY_DRIGHT) {
-        selected_index = std::min(filtered_screenshots.size() - 1, static_cast<size_t>(selected_index) + 1);
-        page_index = GetPageIndex(selected_index);
+        if (page_index == GetPageIndex(selected_index)) {
+            selected_index = selected_index + 1;
+            page_index = GetPageIndex(selected_index);
+        } else {
+            selected_index = ((page_index + 1) * kNRows * kNCols) - 1;
+        }
+
+        selected_index = std::min(filtered_screenshots.size() - 1, static_cast<size_t>(selected_index));
         changed_selection = true;
     }
 
     if (keysDown() & KEY_DUP && selected_index - kNCols >= 0) {
-        selected_index -= kNCols;
-        page_index = GetPageIndex(selected_index);
+        if (page_index == GetPageIndex(selected_index)) {
+            selected_index -= kNCols;
+            page_index = GetPageIndex(selected_index);
+        } else {
+            selected_index = page_index * kNRows * kNCols;
+        }
         changed_selection = true;
     }
 
     if (keysDown() & KEY_DDOWN && selected_index + kNCols < filtered_screenshots.size()) {
-        selected_index += kNCols;
-        page_index = GetPageIndex(selected_index);
+        if (page_index == GetPageIndex(selected_index)) {
+            selected_index += kNCols;
+            page_index = GetPageIndex(selected_index);
+        } else {
+            selected_index = ((page_index + 1) * kNRows * kNCols) - 1;
+        }
         changed_selection = true;
     }
 
@@ -333,7 +350,6 @@ void DrawInterface() {
 
     // Draw selection outline
     if (GetPageIndex(selected_index) == page_index) {
-        std::cout << page_index << "\n";
         int r = (selected_index - page_index * kNRows * kNCols) / kNCols;
         int c = selected_index % kNCols;
 
