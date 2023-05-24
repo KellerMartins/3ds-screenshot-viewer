@@ -46,7 +46,9 @@ void SetUiFunctions(void (*input_fn)(), void (*render_fn)(bool));
 void ClearTargetScreen(TargetScreen screen, u32 clear_color = C2D_Color32(0x40, 0x40, 0x40, 0xFF));
 bool SetTargetScreen(TargetScreen screen);
 
+void DrawLine(float x0, float y0, float x1, float y1, float thickness, u32 color);
 void DrawRect(float x, float y, float width, float height, u32 color);
+void DrawOutlineRect(float x, float y, float width, float height, float thickness, u32 color);
 void DrawCircle(float x, float y, float radius, u32 color);
 void DrawUpArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color = C2D_Color32(0x00, 0x00, 0x00, 0xFF));
 void DrawDownArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color = C2D_Color32(0x00, 0x00, 0x00, 0xFF));

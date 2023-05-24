@@ -109,7 +109,22 @@ void ClearTargetScreen(TargetScreen screen, u32 clear_color) {
     }
 }
 
+void DrawLine(float x0, float y0, float x1, float y1, float thickness, u32 color) { C2D_DrawLine(x0, y0, color, x1, y1, color, thickness, 0); }
+
 void DrawRect(float x, float y, float width, float height, u32 color) { C2D_DrawRectSolid(x, y, 0, width, height, color); }
+
+void DrawOutlineRect(float x, float y, float width, float height, float thickness, u32 color) {
+    float half_t = thickness / 2;
+    x += half_t;
+    y += half_t;
+    width -= thickness;
+    height -= thickness;
+
+    DrawLine(x - half_t, y, x + width + half_t, y, thickness, color);
+    DrawLine(x, y - half_t, x, y + height + half_t, thickness, color);
+    DrawLine(x + width, y - half_t, x + width, y + height + half_t, thickness, color);
+    DrawLine(x - half_t, y + height, x + width + half_t, y + height, thickness, color);
+}
 
 void DrawCircle(float x, float y, float radius, u32 color) { C2D_DrawCircleSolid(x, y, 0, radius, color); }
 

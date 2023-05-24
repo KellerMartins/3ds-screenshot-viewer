@@ -4,6 +4,7 @@
 #include <citro2d.h>
 
 #include <algorithm>
+#include <iostream>
 #include <set>
 
 #include "screenshots.hpp"
@@ -32,6 +33,8 @@ const int kTagLineThickness = 4;
 
 const unsigned int kInputDebounceTicks = 20;
 const unsigned int kInputHoldTicks = 20;
+
+const u32 clrScreenshotOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x9F);
 
 std::vector<size_t> filtered_screenshots;
 
@@ -289,30 +292,38 @@ void DrawInterface() {
         for (int c = 0; c < kNCols; c++) {
             if (i >= filtered_screenshots.size()) break;
 
-            if (selected_index == i) {
-                DrawRect(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - kSelectionOutline,
-                         kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r - kSelectionOutline, kThumbnailWidth + kSelectionOutline * 2,
-                         kThumbnailHeight + kSelectionOutline * 2, clrWhite);
-            }
-
             screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(filtered_screenshots[i]);
+
+            bool is_selected_multi = multi_selection_screenshots.contains(screenshot.name);
+            float offset = is_selected_multi ? kSelectionOutline : 0;
+
             if (screenshot.has_thumbnail) {
-                C2D_ImageTint tint;
-                C2D_PlainImageTint(&tint, clrBlack, !multi_selection_mode || multi_selection_screenshots.contains(screenshot.name) ? 0 : 0.75);
-                C2D_DrawImageAt(screenshot.thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c,
-                                kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, 0, &tint);
+                float scale_x = is_selected_multi ? (kTopScreenWidth + kSelectionOutline * 8) / static_cast<float>(kTopScreenWidth) : 1;
+                float scale_y = is_selected_multi ? (kTopScreenHeight + kSelectionOutline * 8) / static_cast<float>(kTopScreenHeight) : 1;
+
+                // Draw screenshot thumbnail
+                C2D_DrawImageAt(screenshot.thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - offset,
+                                kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r - offset, 0, nullptr, scale_x, scale_y);
             } else {
+                // Draw placeholder rect while loading thumbnails
                 DrawRect(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, kThumbnailWidth,
                          kThumbnailHeight, clrButtons);
             }
 
             if (multi_selection_mode) {
+                // Draw tags
                 size_t num_tags = screenshot.tags.size();
-                int tag_x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c;
+                int tag_x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - offset;
                 for (auto tag : screenshot.tags) {
-                    DrawRect(tag_x, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r + kThumbnailHeight - kTagLineThickness, kThumbnailWidth / num_tags,
-                             kTagLineThickness, tag->color);
-                    tag_x += kThumbnailWidth / num_tags;
+                    DrawRect(tag_x, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r + kThumbnailHeight - kTagLineThickness + offset,
+                             (kThumbnailWidth + offset * 2) / num_tags, kTagLineThickness, tag->color);
+                    tag_x += (kThumbnailWidth + offset * 2) / num_tags;
+                }
+
+                // Draw dark overlay on deselected screenshots
+                if (!is_selected_multi) {
+                    DrawRect(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, kThumbnailWidth,
+                             kThumbnailHeight, clrScreenshotOverlay);
                 }
             }
 
@@ -320,6 +331,27 @@ void DrawInterface() {
         }
     }
 
+    // Draw selection outline
+    if (GetPageIndex(selected_index) == page_index) {
+        std::cout << page_index << "\n";
+        int r = (selected_index - page_index * kNRows * kNCols) / kNCols;
+        int c = selected_index % kNCols;
+
+        screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(filtered_screenshots[selected_index]);
+
+        bool is_selected_multi = multi_selection_screenshots.contains(screenshot.name);
+        float offset = is_selected_multi ? kSelectionOutline : 0;
+        float x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - kSelectionOutline - offset;
+        float y = kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r - kSelectionOutline - offset;
+        float w = kThumbnailWidth + kSelectionOutline * 2 + offset * 2;
+        float h = kThumbnailHeight + kSelectionOutline * 2 + offset * 2;
+
+        u32 outlineColor = (is_selected_multi || !multi_selection_mode) ? clrWhite : clrButtons;
+
+        DrawOutlineRect(x, y, w, h, kSelectionOutline, outlineColor);
+    }
+
+    // Draw navbar buttons
     DrawRect(0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight, page_index > 0 ? clrButtons : clrButtonsDisabled);
     DrawRect(kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight,
              page_index < GetLastPageIndex() ? clrButtons : clrButtonsDisabled);
