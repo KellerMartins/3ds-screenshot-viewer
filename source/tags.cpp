@@ -11,6 +11,7 @@
 #define TOML_ENABLE_FORMATTERS 0
 #include <toml++/toml.hpp>
 
+#include "screenshots.hpp"
 #include "settings.hpp"
 
 namespace tags {
@@ -117,7 +118,9 @@ void Load() {
         if (toml::array* arr = data["tags_filter"].as_array()) {
             arr->for_each([](auto&& el) {
                 if constexpr (toml::is_number<decltype(el)>) {
-                    tags_filter.insert(tags[el.get()]);
+                    if (el.get() >= 0 && el.get() < tags.size()) {
+                        tags_filter.insert(tags[el.get()]);
+                    }
                 }
             });
         }
@@ -125,7 +128,9 @@ void Load() {
         if (toml::array* arr = data["hidden_tags"].as_array()) {
             arr->for_each([](auto&& el) {
                 if constexpr (toml::is_number<decltype(el)>) {
-                    hidden_tags.insert(tags[el.get()]);
+                    if (el.get() >= 0 && el.get() < tags.size()) {
+                        hidden_tags.insert(tags[el.get()]);
+                    }
                 }
             });
         }
@@ -176,15 +181,19 @@ std::shared_ptr<const Tag> Get(size_t index) { return tags[index]; }
 
 size_t Count() { return tags.size(); }
 
-void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<std::shared_ptr<const Tag>> tags) {
+void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<std::shared_ptr<const Tag>> tags_set) {
     for (const std::string& name : screenshot_names) {
         screenshot_tags[name] = {};
 
-        for (auto tag : tags) {
-            screenshot_tags[name].push_back(tag);
+        for (auto tag : tags) {  // Iterates through all tags so the inserted order matches the tags order
+            if (tags_set.contains(tag)) {
+                screenshot_tags[name].push_back(tag);
+            }
         }
     }
+
     Save();
+    screenshots::UpdateOrder();
 }
 
 std::shared_ptr<const Tag> AddTag(Tag new_tag) {
@@ -204,6 +213,7 @@ void ReplaceTag(std::shared_ptr<const Tag> tag, Tag new_tag) {
         Save();
     }
 }
+
 void MoveTag(size_t src_idx, size_t dst_idx) {
     if (src_idx == dst_idx) return;
 
@@ -214,6 +224,7 @@ void MoveTag(size_t src_idx, size_t dst_idx) {
     tags.insert(tags.begin() + dst_idx, t);
 
     Save();
+    screenshots::UpdateOrder();
 }
 
 void DeleteTag(std::shared_ptr<const Tag> tag) {
@@ -234,6 +245,7 @@ void DeleteTag(std::shared_ptr<const Tag> tag) {
         }
 
         Save();
+        screenshots::UpdateOrder();
     }
 }
 
@@ -245,11 +257,13 @@ void SetTagsFilter(std::set<tags::tag_ptr> tags) {
     tags_filter = tags;
 
     Save();
+    screenshots::UpdateOrder();
 }
 
 void SetHiddenTags(std::set<tags::tag_ptr> tags) {
     hidden_tags = tags;
 
     Save();
+    screenshots::UpdateOrder();
 }
 }  // namespace tags

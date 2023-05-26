@@ -36,6 +36,16 @@ struct ScreenshotInfo {
     bool has_all_tag(std::set<tags::tag_ptr> tags);
 };
 
+enum ScreenshotOrder {
+    kTags = 0,
+    kTagsNewer = 1,
+    kOlder = 2,
+    kNewer = 3,
+
+    kFirst = kTags,
+    kLast = kNewer,
+};
+
 using screenshot_ptr = std::shared_ptr<const Screenshot>;
 
 void Init();
@@ -47,6 +57,9 @@ const ScreenshotInfo GetInfo(std::size_t index);
 size_t Count();
 size_t NumLoadedThumbnails();
 
+const ScreenshotOrder GetOrder();
+void SetOrder(ScreenshotOrder order);
+void UpdateOrder();
 }  // namespace screenshots
 
 #endif  // SCREENSHOTS_HPP_

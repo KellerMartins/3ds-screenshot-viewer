@@ -8,6 +8,7 @@
 
 #include "screenshots.hpp"
 #include "settings.hpp"
+#include "ui/settings_menu.hpp"
 #include "ui/tags_menu.hpp"
 
 namespace ui::viewer {
@@ -35,12 +36,10 @@ const unsigned int kInputHoldTicks = 20;
 
 const u32 clrScreenshotOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x9F);
 
-std::vector<size_t> filtered_screenshots;
-
 screenshots::screenshot_ptr selected_screenshot = nullptr;
 std::set<std::string> multi_selection_screenshots;
-unsigned int selected_index = 0;
-unsigned int page_index = 0;
+size_t selected_index = 0;
+size_t page_index = 0;
 
 size_t last_loaded_thumbs = 0;
 unsigned int ticks_touch_held = 0;
@@ -49,13 +48,14 @@ unsigned int ticks_since_last_input;
 
 bool show_ui = true;
 bool multi_selection_mode = false;
+bool touched_down;
 bool hide_last_image;  // Hides last screenshot before the next is loaded
 bool changed_selection;
 bool changed_screen;
 float slider = 0;
 
 unsigned int GetPageIndex(int x) { return x / (kNRows * kNCols); }
-unsigned int GetLastPageIndex() { return GetPageIndex(filtered_screenshots.size() - 1); }
+unsigned int GetLastPageIndex() { return GetPageIndex(screenshots::Count() - 1); }
 
 void DrawBottom();
 void DrawTop();
@@ -67,20 +67,15 @@ void OnSelectHideTags(bool, std::set<tags::tag_ptr>);
 void OpenSetTagsMenu();
 void OpenHideTagsMenu();
 void OpenFilterTagsMenu();
-void ToggleScreenshotSelection(unsigned int);
+void OnCloseSettingsMenu();
+void ToggleScreenshotSelection(size_t);
 
 void Show() {
     changed_screen = true;
     changed_selection = true;
+    touched_down = false;
     ticks_since_last_input = kInputDebounceTicks;
     SetUiFunctions(Input, Render);
-
-    filtered_screenshots.clear();
-    for (size_t i = 0; i < screenshots::Count(); i++) {
-        screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(i);
-        if ((tags::GetTagsFilter().size() == 0 || screenshot.has_all_tag(tags::GetTagsFilter())) && !screenshot.has_any_tag(tags::GetHiddenTags()))
-            filtered_screenshots.push_back(i);
-    }
 }
 
 // Input Functions
@@ -117,7 +112,7 @@ void TouchDownActions() {
     size_t i = page_index * (kNRows * kNCols);
     for (int r = 0; r < kNRows; r++) {
         for (int c = 0; c < kNCols; c++) {
-            if (i >= filtered_screenshots.size()) break;
+            if (i >= screenshots::Count()) break;
 
             if (TouchedInRect(touch, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r,
                               kThumbnailWidth, kThumbnailHeight)) {
@@ -143,7 +138,7 @@ void TouchHoldActions() {
     unsigned int i = page_index * (kNRows * kNCols);
     for (int r = 0; r < kNRows; r++) {
         for (int c = 0; c < kNCols; c++) {
-            if (i >= filtered_screenshots.size()) break;
+            if (i >= screenshots::Count()) break;
 
             if (TouchedInRect(touch, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r,
                               kThumbnailWidth, kThumbnailHeight)) {
@@ -169,8 +164,13 @@ void Input() {
     }
 
     if (keysDown() & KEY_TOUCH) {
+        touched_down = true;
         TouchDownActions();
         ticks_since_last_input = kInputDebounceTicks;  // Debounce is not used for touch actions
+    }
+
+    if (keysUp() & KEY_TOUCH) {
+        touched_down = false;
     }
 
     if (keysHeld() & KEY_TOUCH) {
@@ -179,7 +179,7 @@ void Input() {
         else
             ticks_touch_held = std::min(kInputHoldTicks, ticks_touch_held + 1);
 
-        TouchHoldActions();
+        if (touched_down) TouchHoldActions();
     }
 
     if (keysDown() & KEY_DLEFT) {
@@ -192,7 +192,7 @@ void Input() {
         changed_selection = true;
     }
 
-    if (keysDown() & KEY_DRIGHT) {
+    if (keysDown() & KEY_DRIGHT && screenshots::Count() > 0) {
         if (page_index == GetPageIndex(selected_index)) {
             selected_index = selected_index + 1;
             page_index = GetPageIndex(selected_index);
@@ -200,7 +200,7 @@ void Input() {
             selected_index = ((page_index + 1) * kNRows * kNCols) - 1;
         }
 
-        selected_index = std::min(filtered_screenshots.size() - 1, static_cast<size_t>(selected_index));
+        selected_index = std::min(screenshots::Count() - 1, static_cast<size_t>(selected_index));
         changed_selection = true;
     }
 
@@ -214,7 +214,7 @@ void Input() {
         changed_selection = true;
     }
 
-    if (keysDown() & KEY_DDOWN && selected_index + kNCols < filtered_screenshots.size()) {
+    if (keysDown() & KEY_DDOWN && selected_index + kNCols < screenshots::Count()) {
         if (page_index == GetPageIndex(selected_index)) {
             selected_index += kNCols;
             page_index = GetPageIndex(selected_index);
@@ -240,6 +240,10 @@ void Input() {
             multi_selection_screenshots.clear();
         }
         changed_screen = true;
+    }
+
+    if (keysDown() & KEY_SELECT) {
+        settings_menu::Show(OnCloseSettingsMenu);
     }
 
     if (keysDown() & KEY_X) {
@@ -286,7 +290,7 @@ void Input() {
     }
 
     if (changed_selection && ticks_since_last_input >= kInputDebounceTicks) {
-        screenshots::Load(filtered_screenshots[selected_index], OnLoadScreenshot);
+        screenshots::Load(selected_index, OnLoadScreenshot);
         changed_selection = false;
         changed_screen = true;
         ticks_since_last_input = 0;
@@ -308,9 +312,9 @@ void DrawInterface() {
     size_t i = page_index * (kNRows * kNCols);
     for (int r = 0; r < kNRows; r++) {
         for (int c = 0; c < kNCols; c++) {
-            if (i >= filtered_screenshots.size()) break;
+            if (i >= screenshots::Count()) break;
 
-            screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(filtered_screenshots[i]);
+            screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(i);
 
             bool is_selected_multi = multi_selection_mode && multi_selection_screenshots.contains(screenshot.name);
             float offset = is_selected_multi ? kSelectionOutline : 0;
@@ -350,11 +354,11 @@ void DrawInterface() {
     }
 
     // Draw selection outline
-    if (GetPageIndex(selected_index) == page_index) {
+    if (GetPageIndex(selected_index) == page_index && selected_screenshot != nullptr) {
         int r = (selected_index - page_index * kNRows * kNCols) / kNCols;
         int c = selected_index % kNCols;
 
-        screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(filtered_screenshots[selected_index]);
+        screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(selected_index);
 
         bool is_selected_multi = multi_selection_mode && multi_selection_screenshots.contains(screenshot.name);
         float offset = is_selected_multi ? kSelectionOutline : 0;
@@ -398,17 +402,19 @@ void DrawTop() {
 
     if (hide_last_image || selected_screenshot == nullptr) {
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrBackground);
+        SetTargetScreen(TargetScreen::kTopRight);
+        DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrBackground);
         return;
     }
 
     gfxSet3D(selected_screenshot->is_3d && !hide_last_image);
-    C2D_DrawImageAt(selected_screenshot->top, selected_screenshot->is_3d ? -slider * settings::ExtraStereoOffset() : 0, 0, 0);
+    C2D_DrawImageAt(selected_screenshot->top, selected_screenshot->is_3d ? -slider * settings::GetExtraStereoOffset() : 0, 0, 0);
 
     if (selected_screenshot->is_3d) {
         SetTargetScreen(TargetScreen::kTopRight);
         ClearTargetScreen(TargetScreen::kTopRight, clrBlack);
 
-        C2D_DrawImageAt(selected_screenshot->top_right, slider * settings::ExtraStereoOffset(), 0, 0);
+        C2D_DrawImageAt(selected_screenshot->top_right, slider * settings::GetExtraStereoOffset(), 0, 0);
     }
 }
 
@@ -442,19 +448,24 @@ void OnSelectFilterTags(bool changed_initial_selection, std::set<tags::tag_ptr> 
 void OnSelectHideTags(bool changed_initial_selection, std::set<tags::tag_ptr> tags) {
     if (changed_initial_selection) {
         tags::SetHiddenTags(tags);
-        selected_index = 0;
-        page_index = 0;
+        selected_index = selected_index >= screenshots::Count() ? screenshots::Count() : selected_index + 1;
+        selected_index = selected_index > 0 ? selected_index - 1 : 0;
+        page_index = GetPageIndex(selected_index);
         hide_last_image = true;
         multi_selection_screenshots.clear();
     }
     Show();
 }
 
+void OnCloseSettingsMenu() { Show(); }
+
 // Misc. functions
 
 void OpenSetTagsMenu() {
+    if (selected_screenshot == nullptr) return;
+
     if (!multi_selection_mode) {
-        multi_selection_screenshots = std::set<std::string>{screenshots::GetInfo(filtered_screenshots[selected_index]).name};
+        multi_selection_screenshots = std::set<std::string>{screenshots::GetInfo(selected_index).name};
     }
     tags_menu::Show("Set screenshot tags", true, tags::GetScreenshotsTags(multi_selection_screenshots), OnSelectScreenshotTags);
 }
@@ -463,8 +474,8 @@ void OpenHideTagsMenu() { tags_menu::Show("Hide with tags", false, tags::GetHidd
 
 void OpenFilterTagsMenu() { tags_menu::Show("Filter by tags", false, tags::GetTagsFilter(), OnSelectFilterTags); }
 
-void ToggleScreenshotSelection(unsigned int index) {
-    std::string name = screenshots::GetInfo(filtered_screenshots[index]).name;
+void ToggleScreenshotSelection(size_t index) {
+    std::string name = screenshots::GetInfo(index).name;
     if (multi_selection_screenshots.contains(name)) {
         multi_selection_screenshots.erase(multi_selection_screenshots.find(name));
     } else {
