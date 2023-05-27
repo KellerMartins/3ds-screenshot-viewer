@@ -3,13 +3,12 @@
 
 #include <set>
 #include <string>
-#include <vector>
 
 #include "ui.hpp"
 
 namespace ui::settings_menu {
 
-void Show(void (*callback)());
+void Show(std::set<std::string> selected_screenshots, void (*callback)(bool));
 
 void Input();
 void Render(bool force);

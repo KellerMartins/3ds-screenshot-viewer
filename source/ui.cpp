@@ -137,11 +137,11 @@ void DrawDownArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color
 }
 
 void DrawLeftArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
-    C2D_DrawTriangle(x + scale / 4 - 3, y + scale / 2, color, x + scale / 4 - 3, y - scale / 2, color, x - scale / 2, y, color, 0);
+    C2D_DrawTriangle(x + scale / 4 - 1, y + scale / 2, color, x + scale / 4 - 1, y - scale / 2, color, x - scale / 2 + 2, y, color, 0);
 }
 
 void DrawRightArrow(unsigned int x, unsigned int y, unsigned int scale, u32 color) {
-    C2D_DrawTriangle(x - scale / 4 + 3, y + scale / 2, color, x - scale / 4 + 3, y - scale / 2, color, x + scale / 2, y, color, 0);
+    C2D_DrawTriangle(x - scale / 4 + 1, y + scale / 2, color, x - scale / 4 + 1, y - scale / 2, color, x + scale / 2 - 2, y, color, 0);
 }
 
 void DrawText(float x, float y, float size, u32 color, std::string text, TextAlignment alignment) {

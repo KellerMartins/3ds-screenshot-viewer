@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <filesystem>
+#include <iostream>
 #include <list>
 #include <map>
 #include <string>
@@ -39,11 +40,11 @@ std::atomic<bool> run_thread = true;
 std::atomic<int> loaded_thumbs = 0;
 
 std::atomic<size_t> last_screenshot_index = std::numeric_limits<size_t>::max();
-std::atomic<size_t> loading_screenshot_index = 0;
-size_t next_screenshot_index = std::numeric_limits<size_t>::max() - 1;
+std::atomic<size_t> loading_screenshot_index = std::numeric_limits<size_t>::max();
+size_t next_screenshot_index = std::numeric_limits<size_t>::max();
 
 // Use a screenshot for loading and another for returning to the callback
-std::shared_ptr<Screenshot> screenshot_buffer[2];
+Screenshot *screenshot_buffer[2];
 constexpr int num_buffers = (sizeof(screenshot_buffer) / sizeof(screenshot_buffer[0]));
 std::atomic<int> current_buffer = 0;
 int last_buffer = 0;
@@ -78,7 +79,7 @@ C2D_Image CreateImage(u16 width, u16 height) {
 }
 
 void LoadThumbnail(ScreenshotInfo *info) {
-    info->thumbnail = CreateImage(ui::kThumbnailWidth, ui::kThumbnailHeight);
+    info->init_thumbnail();
 
     unsigned int error = loadbmp_to_texture(info->path_top, info->thumbnail.tex, ui::kThumbnailWidth, ui::kThumbnailHeight, ui::kThumbnailDownscale);
     info->has_thumbnail = !error;
@@ -103,8 +104,8 @@ void ThreadLoadScreenshot(void *arg) {
         svcClearEvent(loadScreenshotRequest);
 
         size_t index = loading_screenshot_index;
-        if (index != last_screenshot_index) {
-            std::shared_ptr<Screenshot> screenshot = screenshot_buffer[current_buffer];
+        if (index != last_screenshot_index && index < screenshots.size()) {
+            Screenshot *screenshot = screenshot_buffer[current_buffer];
 
             unsigned int error;
             if (screenshots[index].path_top_right.size() > 0) {
@@ -265,12 +266,12 @@ void Init() {
     UpdateOrder();
 
     for (int i = 0; i < num_buffers; i++) {
-        screenshot_buffer[i] = std::shared_ptr<Screenshot>(new Screenshot({
+        screenshot_buffer[i] = new Screenshot({
             false,
             CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
             CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
             CreateImage(ui::kBottomScreenWidth, ui::kBottomScreenHeight),
-        }));
+        });
     }
 
     s32 prio = 0;
@@ -280,7 +281,6 @@ void Init() {
 
     thumbnailThread = threadCreate(ThreadLoadThumbnails, nullptr, kStackSize, prio - 1, -2, false);
     loadScreenshotThread = threadCreate(ThreadLoadScreenshot, nullptr, kStackSize, prio - 1, -2, false);
-    svcSignalEvent(loadScreenshotRequest);
 }
 
 void Exit() {
@@ -322,13 +322,47 @@ void Load(std::size_t index, void (*callback)(screenshot_ptr)) {
     load_screenshot_callback = callback;
 }
 
-const ScreenshotInfo GetInfo(std::size_t index) { return screenshots[screenshots_indexes[index]]; }
 size_t Count() { return screenshots_indexes.size(); }
 size_t NumLoadedThumbnails() { return loaded_thumbs; }
+
+info_ptr GetInfo(std::size_t index) {
+    if (index >= screenshots_indexes.size()) return nullptr;
+    return &screenshots[screenshots_indexes[index]];
+}
 
 const ScreenshotOrder GetOrder() { return screenshot_order; }
 void SetOrder(ScreenshotOrder order) {
     screenshot_order = order;
+    UpdateOrder();
+}
+
+void Delete(std::set<std::string> screenshot_names) {
+    std::vector<ScreenshotInfo> new_screenshots;
+    std::vector<ScreenshotInfo> deleted_screenshots;
+    for (size_t i = 0; i < screenshots.size(); i++) {
+        if (screenshot_names.contains(screenshots[i].name)) {
+            deleted_screenshots.push_back(std::move(screenshots[i]));
+        } else {
+            new_screenshots.push_back(std::move(screenshots[i]));
+        }
+    }
+
+    // Wait until the thumbnail thread has finished loading
+    threadJoin(thumbnailThread, U64_MAX);
+
+    screenshots = std::move(new_screenshots);
+
+    for (auto &screenshot : deleted_screenshots) {
+        try {
+            if (screenshot.path_top != "") std::filesystem::remove(screenshot.path_top);
+            if (screenshot.path_top_right != "") std::filesystem::remove(screenshot.path_top_right);
+            if (screenshot.path_bottom != "") std::filesystem::remove(screenshot.path_bottom);
+        } catch (const std::filesystem::filesystem_error &err) {
+            std::cout << "Error deleting screenshots: " << err.what() << '\n';
+        }
+    }
+
+    tags::RemoveScreenshotsTags(screenshot_names);
     UpdateOrder();
 }
 
@@ -344,5 +378,31 @@ bool ScreenshotInfo::has_all_tag(std::set<tags::tag_ptr> tags) {
         if (std::find(this->tags.begin(), this->tags.end(), tag) == this->tags.end()) return false;
     }
     return true;
+}
+
+void ScreenshotInfo::init_thumbnail() { thumbnail = CreateImage(ui::kThumbnailWidth, ui::kThumbnailHeight); }
+
+ScreenshotInfo::~ScreenshotInfo() {
+    if (thumbnail.tex != nullptr || thumbnail.subtex != nullptr) {
+        C3D_TexDelete(thumbnail.tex);
+        delete thumbnail.tex;
+        delete thumbnail.subtex;
+    }
+}
+
+ScreenshotInfo::ScreenshotInfo(std::string name, const std::vector<tags::tag_ptr> &tags) : name(name), tags(tags), has_thumbnail(false) {}
+ScreenshotInfo::ScreenshotInfo(ScreenshotInfo &&other)
+    : name(std::move(other.name)),
+
+      path_top(std::move(other.path_top)),
+      path_top_right(std::move(other.path_top_right)),
+      path_bottom(std::move(other.path_bottom)),
+
+      tags(other.tags),
+      has_thumbnail(other.has_thumbnail),
+
+      thumbnail(std::move(other.thumbnail)) {
+    other.thumbnail.tex = nullptr;
+    other.thumbnail.subtex = nullptr;
 }
 }  // namespace screenshots

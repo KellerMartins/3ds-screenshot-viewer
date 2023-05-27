@@ -16,8 +16,8 @@
 
 namespace tags {
 
-std::vector<std::shared_ptr<Tag>> tags;
-std::map<std::string, std::vector<std::shared_ptr<const Tag>>> screenshot_tags;
+std::vector<Tag*> tags;
+std::map<std::string, std::vector<const Tag*>> screenshot_tags;
 
 std::set<tags::tag_ptr> tags_filter;
 std::set<tags::tag_ptr> hidden_tags;
@@ -40,7 +40,7 @@ u32 color_from_hex_string(std::string x) {
     return std::stoul(color, nullptr, 16);
 }
 
-int GetTagIndex(std::shared_ptr<const Tag> tag) {
+int GetTagIndex(tag_ptr tag) {
     for (size_t i = 0; i < tags.size(); i++) {
         if (tag == tags[i]) {
             return i;
@@ -106,10 +106,10 @@ void Load() {
             arr->for_each([](auto&& el) {
                 if constexpr (toml::is_table<decltype(el)>) {
                     if (el["name"].is_string() && el["color"].is_string()) {
-                        tags.push_back(std::shared_ptr<Tag>(new Tag({
+                        tags.push_back(new Tag({
                             el["name"].as_string()->get(),
                             color_from_hex_string(el["color"].as_string()->get()),
-                        })));
+                        }));
                     }
                 }
             });
@@ -156,7 +156,7 @@ void Load() {
     }
 }
 
-std::vector<std::shared_ptr<const Tag>>& GetScreenshotTags(std::string screenshot_name) {
+std::vector<tag_ptr>& GetScreenshotTags(std::string screenshot_name) {
     if (!screenshot_tags.contains(screenshot_name)) {
         screenshot_tags[screenshot_name] = {};
     }
@@ -164,8 +164,8 @@ std::vector<std::shared_ptr<const Tag>>& GetScreenshotTags(std::string screensho
     return screenshot_tags[screenshot_name];
 }
 
-std::set<std::shared_ptr<const Tag>> GetScreenshotsTags(std::set<std::string> screenshot_names) {
-    std::set<std::shared_ptr<const Tag>> tags_set;
+std::set<tag_ptr> GetScreenshotsTags(std::set<std::string> screenshot_names) {
+    std::set<tag_ptr> tags_set;
     for (const std::string& name : screenshot_names) {
         if (screenshot_tags.contains(name)) {
             for (auto tag : screenshot_tags[name]) {
@@ -177,11 +177,11 @@ std::set<std::shared_ptr<const Tag>> GetScreenshotsTags(std::set<std::string> sc
     return tags_set;
 }
 
-std::shared_ptr<const Tag> Get(size_t index) { return tags[index]; }
+tag_ptr Get(size_t index) { return tags[index]; }
 
 size_t Count() { return tags.size(); }
 
-void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<std::shared_ptr<const Tag>> tags_set) {
+void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_ptr> tags_set) {
     for (const std::string& name : screenshot_names) {
         screenshot_tags[name] = {};
 
@@ -196,8 +196,17 @@ void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<std::sh
     screenshots::UpdateOrder();
 }
 
-std::shared_ptr<const Tag> AddTag(Tag new_tag) {
-    auto ptr = std::shared_ptr<Tag>(new Tag(new_tag));
+void RemoveScreenshotsTags(std::set<std::string> screenshot_names) {
+    for (const std::string& name : screenshot_names) {
+        if (screenshot_tags.contains(name)) {
+            screenshot_tags.erase(name);
+        }
+    }
+    Save();
+}
+
+tag_ptr AddTag(Tag new_tag) {
+    auto ptr = new Tag(new_tag);
     tags.push_back(ptr);
 
     Save();
@@ -205,7 +214,7 @@ std::shared_ptr<const Tag> AddTag(Tag new_tag) {
     return ptr;
 }
 
-void ReplaceTag(std::shared_ptr<const Tag> tag, Tag new_tag) {
+void ReplaceTag(tag_ptr tag, Tag new_tag) {
     int idx = GetTagIndex(tag);
     if (idx >= 0) {
         *tags[idx] = new_tag;
@@ -227,9 +236,10 @@ void MoveTag(size_t src_idx, size_t dst_idx) {
     screenshots::UpdateOrder();
 }
 
-void DeleteTag(std::shared_ptr<const Tag> tag) {
+void DeleteTag(tag_ptr tag) {
     int idx = GetTagIndex(tag);
     if (idx >= 0) {
+        delete tags[idx];
         tags.erase(tags.begin() + idx);
 
         for (auto& kv : screenshot_tags) {

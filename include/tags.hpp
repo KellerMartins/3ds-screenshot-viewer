@@ -4,7 +4,6 @@
 #include <3ds.h>
 
 #include <map>
-#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -15,7 +14,7 @@ struct Tag {
     u32 color;
 };
 
-using tag_ptr = std::shared_ptr<const Tag>;
+using tag_ptr = const Tag*;
 
 void Load();
 void Save();
@@ -30,6 +29,7 @@ const std::set<tags::tag_ptr> GetHiddenTags();
 size_t Count();
 
 void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_ptr> tags);
+void RemoveScreenshotsTags(std::set<std::string> screenshot_names);
 void SetTagsFilter(std::set<tags::tag_ptr> tags);
 void SetHiddenTags(std::set<tags::tag_ptr> tags);
 

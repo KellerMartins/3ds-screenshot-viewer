@@ -64,6 +64,7 @@ void OnLoadScreenshot(screenshots::screenshot_ptr screenshot);
 void OnSelectScreenshotTags(bool, std::set<tags::tag_ptr>);
 void OnSelectFilterTags(bool, std::set<tags::tag_ptr>);
 void OnSelectHideTags(bool, std::set<tags::tag_ptr>);
+void OpenSettingsMenu();
 void OpenSetTagsMenu();
 void OpenHideTagsMenu();
 void OpenFilterTagsMenu();
@@ -243,7 +244,7 @@ void Input() {
     }
 
     if (keysDown() & KEY_SELECT) {
-        settings_menu::Show(OnCloseSettingsMenu);
+        OpenSettingsMenu();
     }
 
     if (keysDown() & KEY_X) {
@@ -314,17 +315,18 @@ void DrawInterface() {
         for (int c = 0; c < kNCols; c++) {
             if (i >= screenshots::Count()) break;
 
-            screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(i);
+            screenshots::info_ptr screenshot = screenshots::GetInfo(i);
+            if (screenshot == nullptr) return;
 
-            bool is_selected_multi = multi_selection_mode && multi_selection_screenshots.contains(screenshot.name);
+            bool is_selected_multi = multi_selection_mode && multi_selection_screenshots.contains(screenshot->name);
             float offset = is_selected_multi ? kSelectionOutline : 0;
 
-            if (screenshot.has_thumbnail) {
+            if (screenshot->has_thumbnail) {
                 float scale_x = is_selected_multi ? (kTopScreenWidth + kSelectionOutline * 8) / static_cast<float>(kTopScreenWidth) : 1;
                 float scale_y = is_selected_multi ? (kTopScreenHeight + kSelectionOutline * 8) / static_cast<float>(kTopScreenHeight) : 1;
 
                 // Draw screenshot thumbnail
-                C2D_DrawImageAt(screenshot.thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - offset,
+                C2D_DrawImageAt(screenshot->thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - offset,
                                 kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r - offset, 0, nullptr, scale_x, scale_y);
             } else {
                 // Draw placeholder rect while loading thumbnails
@@ -334,9 +336,9 @@ void DrawInterface() {
 
             if (multi_selection_mode) {
                 // Draw tags
-                size_t num_tags = screenshot.tags.size();
+                size_t num_tags = screenshot->tags.size();
                 int tag_x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - offset;
-                for (auto tag : screenshot.tags) {
+                for (auto tag : screenshot->tags) {
                     DrawRect(tag_x, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r + kThumbnailHeight - kTagLineThickness + offset,
                              (kThumbnailWidth + offset * 2) / num_tags, kTagLineThickness, tag->color);
                     tag_x += (kThumbnailWidth + offset * 2) / num_tags;
@@ -354,35 +356,43 @@ void DrawInterface() {
     }
 
     // Draw selection outline
-    if (GetPageIndex(selected_index) == page_index && selected_screenshot != nullptr) {
-        int r = (selected_index - page_index * kNRows * kNCols) / kNCols;
-        int c = selected_index % kNCols;
+    if (GetPageIndex(selected_index) == page_index) {
+        screenshots::info_ptr screenshot = screenshots::GetInfo(selected_index);
+        if (screenshot != nullptr) {
+            int r = (selected_index - page_index * kNRows * kNCols) / kNCols;
+            int c = selected_index % kNCols;
 
-        screenshots::ScreenshotInfo screenshot = screenshots::GetInfo(selected_index);
+            bool is_selected_multi = multi_selection_mode && multi_selection_screenshots.contains(screenshot->name);
+            float offset = is_selected_multi ? kSelectionOutline : 0;
+            float x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - kSelectionOutline - offset;
+            float y = kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r - kSelectionOutline - offset;
+            float w = kThumbnailWidth + kSelectionOutline * 2 + offset * 2;
+            float h = kThumbnailHeight + kSelectionOutline * 2 + offset * 2;
 
-        bool is_selected_multi = multi_selection_mode && multi_selection_screenshots.contains(screenshot.name);
-        float offset = is_selected_multi ? kSelectionOutline : 0;
-        float x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - kSelectionOutline - offset;
-        float y = kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r - kSelectionOutline - offset;
-        float w = kThumbnailWidth + kSelectionOutline * 2 + offset * 2;
-        float h = kThumbnailHeight + kSelectionOutline * 2 + offset * 2;
+            u32 outlineColor = (is_selected_multi || !multi_selection_mode) ? clrWhite : clrButtons;
 
-        u32 outlineColor = (is_selected_multi || !multi_selection_mode) ? clrWhite : clrButtons;
+            DrawOutlineRect(x, y, w, h, kSelectionOutline, outlineColor);
+        }
+    }
 
-        DrawOutlineRect(x, y, w, h, kSelectionOutline, outlineColor);
+    if (screenshots::Count() == 0) {
+        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 - 50, 0.8, clrButtons, "No screenshot");
+        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 - 25, 0.8, clrButtons, "found at");
+        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2, 0.8, clrButtons, settings::ScreenshotsPath());
     }
 
     // Draw navbar buttons
     DrawRect(0, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight, page_index > 0 ? clrButtons : clrButtonsDisabled);
     DrawRect(kBottomScreenWidth - kNavbarArrowWidth, kBottomScreenHeight - kNavbarHeight, kNavbarArrowWidth, kNavbarHeight,
              page_index < GetLastPageIndex() ? clrButtons : clrButtonsDisabled);
-    DrawRect(kNavbarArrowWidth + kNavbarButtonsSpacing, kBottomScreenHeight - kNavbarHeight, kNavbarHideButtonWidth, kNavbarHeight, clrButtons);
+    DrawRect(kNavbarArrowWidth + kNavbarButtonsSpacing, kBottomScreenHeight - kNavbarHeight, kNavbarHideButtonWidth, kNavbarHeight,
+             screenshots::Count() > 0 ? clrButtons : clrButtonsDisabled);
 
     DrawLeftArrow(kNavbarIconMargin + kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale,
                   page_index > 0 ? clrBlack : clrBackground);
     DrawRightArrow(kBottomScreenWidth - kNavbarIconMargin - kNavbarIconScale / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale,
                    page_index < GetLastPageIndex() ? clrBlack : clrBackground);
-    DrawUpArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale);
+    DrawUpArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kNavbarHeight / 2, kNavbarIconScale, screenshots::Count() > 0 ? clrBlack : clrBackground);
 }
 
 void DrawBottom() {
@@ -457,15 +467,34 @@ void OnSelectHideTags(bool changed_initial_selection, std::set<tags::tag_ptr> ta
     Show();
 }
 
-void OnCloseSettingsMenu() { Show(); }
+void OnCloseSettingsMenu(bool deleted_selection) {
+    if (deleted_selection) {
+        selected_index = selected_index >= screenshots::Count() && selected_index != 0 ? screenshots::Count() - 1 : selected_index;
+        page_index = GetPageIndex(selected_index);
+        hide_last_image = true;
+        multi_selection_screenshots.clear();
+        multi_selection_mode = false;
+    }
+    Show();
+}
 
 // Misc. functions
 
-void OpenSetTagsMenu() {
-    if (selected_screenshot == nullptr) return;
-
+void OpenSettingsMenu() {
     if (!multi_selection_mode) {
-        multi_selection_screenshots = std::set<std::string>{screenshots::GetInfo(selected_index).name};
+        screenshots::info_ptr screenshot = screenshots::GetInfo(selected_index);
+        if (screenshot == nullptr) return;
+
+        multi_selection_screenshots = std::set<std::string>{screenshot->name};
+    }
+    settings_menu::Show(multi_selection_screenshots, OnCloseSettingsMenu);
+}
+
+void OpenSetTagsMenu() {
+    if (!multi_selection_mode) {
+        screenshots::info_ptr screenshot = screenshots::GetInfo(selected_index);
+        if (screenshot == nullptr) return;
+        multi_selection_screenshots = std::set<std::string>{screenshot->name};
     }
     tags_menu::Show("Set screenshot tags", true, tags::GetScreenshotsTags(multi_selection_screenshots), OnSelectScreenshotTags);
 }
@@ -475,11 +504,13 @@ void OpenHideTagsMenu() { tags_menu::Show("Hide with tags", false, tags::GetHidd
 void OpenFilterTagsMenu() { tags_menu::Show("Filter by tags", false, tags::GetTagsFilter(), OnSelectFilterTags); }
 
 void ToggleScreenshotSelection(size_t index) {
-    std::string name = screenshots::GetInfo(index).name;
-    if (multi_selection_screenshots.contains(name)) {
-        multi_selection_screenshots.erase(multi_selection_screenshots.find(name));
+    screenshots::info_ptr screenshot = screenshots::GetInfo(index);
+    if (screenshot == nullptr) return;
+
+    if (multi_selection_screenshots.contains(screenshot->name)) {
+        multi_selection_screenshots.erase(multi_selection_screenshots.find(screenshot->name));
     } else {
-        multi_selection_screenshots.insert(name);
+        multi_selection_screenshots.insert(screenshot->name);
     }
 }
 }  // namespace ui::viewer

@@ -25,9 +25,9 @@ const int kButtonArrowWidth = 64;
 const int kButtonArrowSize = 16;
 
 const int kTagsMaxPositionY = kMenuPositionY;
-const int kTagHeight = 25;
+const int kTagHeight = 24;
 const int kTagPadding = kTagHeight / 2;
-const int kTagMargin = 2;
+const int kTagMargin = 3;
 const int kTagRows = 5;
 const int kTagRowOffsetY = kTagHeight + kTagMargin;
 const float kTagTextSize = 0.6;
@@ -124,6 +124,15 @@ void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> sele
     reduced_menu_height = tag_rows.size() < kTagRows ? (kTagRows - std::max(kMenuMinRows, num_rows)) * (kTagHeight + kTagMargin) : 0;
     reduced_menu_tags_offset =
         reduced_menu_height + ((kMenuMaxHeight - reduced_menu_height - kButtonHeight) - std::min(num_rows, kTagRows) * (kTagHeight + kTagMargin)) / 2;
+
+    while (row_offset >= tag_rows.size()) {
+        if (row_offset >= kTagRows) {
+            row_offset -= kTagRows;
+        } else {
+            row_offset = 0;
+            break;
+        }
+    }
 }
 
 std::set<tags::tag_ptr> GetSelectedTags() {
@@ -218,8 +227,9 @@ void Input() {
         }
 
         // Close menu
-        if ((tag_rows.size() <= 7 && TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing,
-                                                   kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 2, kButtonHeight)) ||
+        if ((tag_rows.size() <= kTagRows &&
+             TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing,
+                           kMenuWidth - kButtonSpacing * 2, kButtonHeight)) ||
             TouchedInRect(touch, (kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing * 2 + kButtonArrowWidth,
                           kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 4 - kButtonArrowWidth * 2, kButtonHeight)) {
             Close();
@@ -292,7 +302,7 @@ void Render(bool force) {
         y += kTagRowOffsetY;
     }
 
-    if (tag_rows.size() <= 7) {
+    if (tag_rows.size() <= kTagRows) {
         // Close menu button
         DrawRect((kBottomScreenWidth - kMenuWidth) / 2 + kButtonSpacing, kBottomScreenHeight - kButtonHeight - kButtonSpacing, kMenuWidth - kButtonSpacing * 2,
                  kButtonHeight, clrButtons);

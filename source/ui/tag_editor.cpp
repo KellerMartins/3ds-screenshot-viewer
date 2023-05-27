@@ -14,7 +14,7 @@
 namespace ui::tag_editor {
 
 const int kPreviewTagPositionY = 6;
-const int kTagHeight = 25;
+const int kTagHeight = 24;
 const int kTagPadding = kTagHeight / 2;
 const float kTagTextSize = 0.6;
 const float kTagTextOffsetY = 3;
@@ -389,7 +389,7 @@ void Render(bool force) {
                 skip = 1;
             }
             if (edited_tag_index + (i + skip) >= 0 && edited_tag_index + (i + skip) < static_cast<int>(tags::Count())) {
-                DrawTag(tags::Get(edited_tag_index + (i + skip)).get(), tag_y);
+                DrawTag(tags::Get(edited_tag_index + (i + skip)), tag_y);
             }
             tag_y += (kTagHeight + kPosSelectorTagSpacing);
         }
