@@ -171,6 +171,16 @@ float GetTextWidth(float size, std::string text) {
     return width;
 }
 
+u32 GetApproximateColorBrightness(u32 color) {
+    u32 b = (color >> 16) & 0x000000FF;
+    u32 g = (color >> 8) & 0x000000FF;
+    u32 r = color & 0x000000FF;
+
+    u32 brightness = (r + r + r + b + g + g + g + g) >> 3;
+
+    return brightness;
+}
+
 bool TouchedInRect(touchPosition touch, int x, int y, int w, int h) { return touch.px > x && touch.px < x + w && touch.py > y && touch.py < y + h; }
 
 bool PressedExit() { return pressed_exit_button; }

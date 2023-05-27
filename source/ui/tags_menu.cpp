@@ -65,7 +65,7 @@ struct TagRow {
         float x = this->x();
         for (TagItem& item : items) {
             u32 tag_color = item.selected ? item.tag->color : clrButtons;
-            u32 text_color = item.selected ? clrWhite : clrBlack;
+            u32 text_color = item.selected ? (GetApproximateColorBrightness(item.tag->color) >= kContrastThreshold ? clrBlack : clrWhite) : clrBlack;
 
             DrawRect(x + kTagPadding, y, item.width - kTagPadding * 2, kTagHeight, tag_color);
             DrawCircle(x + kTagPadding, y + kTagHeight / 2, kTagHeight / 2, tag_color);
@@ -117,7 +117,7 @@ void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> sele
         }
 
         tag_rows.back().items.push_back(item);
-        tag_rows.back().width += item.width;
+        tag_rows.back().width += item.width + kTagMargin;
     }
 
     int num_rows = tag_rows.size();

@@ -291,9 +291,11 @@ void Input() {
 
 void DrawTag(const tags::Tag* tag, float y) {
     std::string tag_text = tag->name == "" ? "Preview" : tag->name;
-    u32 tag_text_color = tag->name == "" ? clrButtonsDisabled : clrBlack;
+    u32 tag_text_color = tag->name == "" ? clrButtonsDisabled : GetApproximateColorBrightness(tag->color) >= kContrastThreshold ? clrBlack : clrWhite;
+
     float tag_width = GetTextWidth(kTagTextSize, tag_text) + kTagPadding * 2;
     float tag_x = (kBottomScreenWidth - tag_width) / 2;
+
     DrawRect(tag_x + kTagPadding, y, tag_width - kTagPadding * 2, kTagHeight, tag->color);
     DrawCircle(tag_x + kTagPadding, y + kTagHeight / 2, kTagHeight / 2, tag->color);
     DrawCircle(tag_x + tag_width - kTagPadding, y + kTagHeight / 2, kTagHeight / 2, tag->color);
