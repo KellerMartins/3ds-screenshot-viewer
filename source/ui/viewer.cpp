@@ -34,7 +34,7 @@ const int kTagLineThickness = 4;
 const unsigned int kInputDebounceTicks = 20;
 const unsigned int kInputHoldTicks = 20;
 
-const u32 clrScreenshotOverlay = C2D_Color32(0x11, 0x11, 0x11, 0x9F);
+const u32 clrScreenshotOverlay = C2D_Color32(0x00, 0x00, 0x00, 0x9F);
 
 screenshots::screenshot_ptr selected_screenshot = nullptr;
 std::set<std::string> multi_selection_screenshots;
