@@ -437,6 +437,7 @@ void OnSelectScreenshotTags(bool changed_initial_selection, std::set<tags::tag_p
     if (changed_initial_selection) {
         tags::SetScreenshotsTags(multi_selection_screenshots, tags);
         multi_selection_screenshots.clear();
+        multi_selection_mode = false;
     }
     Show();
 }
@@ -448,6 +449,7 @@ void OnSelectFilterTags(bool changed_initial_selection, std::set<tags::tag_ptr> 
         page_index = 0;
         hide_last_image = true;
         multi_selection_screenshots.clear();
+        multi_selection_mode = false;
     }
     Show();
 }
@@ -460,6 +462,7 @@ void OnSelectHideTags(bool changed_initial_selection, std::set<tags::tag_ptr> ta
         page_index = GetPageIndex(selected_index);
         hide_last_image = true;
         multi_selection_screenshots.clear();
+        multi_selection_mode = false;
     }
     Show();
 }
@@ -506,6 +509,9 @@ void ToggleScreenshotSelection(size_t index) {
 
     if (multi_selection_screenshots.contains(screenshot->name)) {
         multi_selection_screenshots.erase(multi_selection_screenshots.find(screenshot->name));
+        if (multi_selection_screenshots.size() == 0) {
+            multi_selection_mode = false;
+        }
     } else {
         multi_selection_screenshots.insert(screenshot->name);
     }
