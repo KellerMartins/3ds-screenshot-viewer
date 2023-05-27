@@ -94,6 +94,10 @@ void Input() {
         Close();
     }
 
+    if (Changed3DSlider()) {
+        changed = true;
+    }
+
     // Read the touch screen coordinates
     if (keysDown() & KEY_TOUCH || keysHeld() & KEY_TOUCH) {
         hidTouchRead(&touch);

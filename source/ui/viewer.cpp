@@ -52,7 +52,6 @@ bool touched_down;
 bool hide_last_image;  // Hides last screenshot before the next is loaded
 bool changed_selection;
 bool changed_screen;
-float slider = 0;
 
 unsigned int GetPageIndex(int x) { return x / (kNRows * kNCols); }
 unsigned int GetLastPageIndex() { return GetPageIndex(screenshots::Count() - 1); }
@@ -278,9 +277,7 @@ void Input() {
         }
     }
 
-    float new_slider = 1.0f - osGet3DSliderState();
-    if (slider != new_slider) {
-        slider = new_slider;
+    if (Changed3DSlider()) {
         changed_screen = true;
     }
 
@@ -416,15 +413,15 @@ void DrawTop() {
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrBackground);
         return;
     }
-
+    int offset_3d = static_cast<int>(std::round(Get3DSlider() * settings::GetExtraStereoOffset()));
     gfxSet3D(selected_screenshot->is_3d && !hide_last_image);
-    C2D_DrawImageAt(selected_screenshot->top, selected_screenshot->is_3d ? -slider * settings::GetExtraStereoOffset() : 0, 0, 0);
+    C2D_DrawImageAt(selected_screenshot->top, selected_screenshot->is_3d ? -offset_3d : 0, 0, 0);
 
     if (selected_screenshot->is_3d) {
         SetTargetScreen(TargetScreen::kTopRight);
         ClearTargetScreen(TargetScreen::kTopRight, clrBlack);
 
-        C2D_DrawImageAt(selected_screenshot->top_right, slider * settings::GetExtraStereoOffset(), 0, 0);
+        C2D_DrawImageAt(selected_screenshot->top_right, offset_3d, 0, 0);
     }
 }
 

@@ -62,6 +62,9 @@ u32 GetApproximateColorBrightness(u32 color);
 
 bool TouchedInRect(touchPosition touch, int x, int y, int w, int h);
 
+float Get3DSlider();
+bool Changed3DSlider();
+
 bool PressedExit();
 }  // namespace ui
 

@@ -22,6 +22,8 @@ void (*input_function)() = nullptr;
 void (*render_function)(bool) = nullptr;
 
 bool pressed_exit_button = false;
+float slider_3d = 0;
+float last_slider_3d = 0;
 
 void Init() {
     top_target = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
@@ -56,6 +58,9 @@ void Input() {
         pressed_exit_button = true;
         return;
     }
+
+    last_slider_3d = slider_3d;
+    slider_3d = 1.0f - osGet3DSliderState();
 
     if (input_function != nullptr) input_function();
 }
@@ -180,6 +185,9 @@ u32 GetApproximateColorBrightness(u32 color) {
 
     return brightness;
 }
+
+float Get3DSlider() { return slider_3d; }
+bool Changed3DSlider() { return slider_3d != last_slider_3d; }
 
 bool TouchedInRect(touchPosition touch, int x, int y, int w, int h) { return touch.px > x && touch.px < x + w && touch.py > y && touch.py < y + h; }
 
