@@ -67,6 +67,7 @@ info_ptr GetInfo(std::size_t index);
 
 size_t Count();
 size_t NumLoadedThumbnails();
+bool FoundScreenshots();
 
 const ScreenshotOrder GetOrder();
 void SetOrder(ScreenshotOrder order);

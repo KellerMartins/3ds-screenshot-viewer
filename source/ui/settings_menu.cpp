@@ -222,7 +222,7 @@ void Render(bool force) {
             DrawCircle(kBottomScreenWidth / 2, kOptionPositionY + 143, 20, clrButtons);
             DrawCircle(kBottomScreenWidth / 2, kOptionPositionY + 137 + offset_pressing, 20, clrWhite);
             DrawText(kBottomScreenWidth / 2, kOptionPositionY + 120 + offset_pressing, 1, clrButtons, "A");
-            DrawCircle(kBottomScreenWidth / 2, kOptionPositionY + 143, ticks_delete_held / static_cast<float>(kTicksToDelete) * 20, clrBackground);
+            DrawCircle(kBottomScreenWidth / 2, kOptionPositionY + 143, ticks_delete_held / static_cast<float>(kTicksToDelete - 10) * 20, clrBackground);
         } else {
             DrawText(kBottomScreenWidth / 2, kOptionPositionY + 56, 1, clrButtons, "Deleted " + numScreenshots);
             DrawText(kBottomScreenWidth / 2, kOptionPositionY + 78, 1, clrButtons, scrns_string);

@@ -324,6 +324,7 @@ void Load(std::size_t index, void (*callback)(screenshot_ptr)) {
 
 size_t Count() { return screenshots_indexes.size(); }
 size_t NumLoadedThumbnails() { return loaded_thumbs; }
+bool FoundScreenshots() { return screenshots.size() > 0; }
 
 info_ptr GetInfo(std::size_t index) {
     if (index >= screenshots_indexes.size()) return nullptr;

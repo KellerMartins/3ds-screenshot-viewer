@@ -10,7 +10,7 @@
 
 namespace ui::tags_menu {
 
-void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, std::set<tags::tag_ptr>));
+void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, int, std::set<tags::tag_ptr>));
 
 void Input();
 void Render(bool force);

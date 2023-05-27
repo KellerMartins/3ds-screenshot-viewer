@@ -84,7 +84,7 @@ struct TagRow {
 std::string top_title;
 std::vector<TagRow> tag_rows;
 bool can_create_tags;
-void (*return_callback)(bool, std::set<tags::tag_ptr>);
+void (*return_callback)(bool, int, std::set<tags::tag_ptr>);
 
 unsigned int row_offset = 0;
 unsigned int ticks_touch_held = 0;
@@ -96,7 +96,7 @@ bool touched_down;
 bool changed_initial_selection;
 bool changed;
 
-void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, std::set<tags::tag_ptr>)) {
+void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, int, std::set<tags::tag_ptr>)) {
     changed = true;
     SetUiFunctions(Input, Render);
 
@@ -149,14 +149,14 @@ std::set<tags::tag_ptr> GetSelectedTags() {
     return selected;
 }
 
-void Close() {
+void Close(int key = 0) {
     std::set<tags::tag_ptr> selected;
 
     if (changed_initial_selection) {
         selected = GetSelectedTags();
     }
 
-    return_callback(changed_initial_selection, selected);
+    return_callback(changed_initial_selection, key, selected);
 }
 
 void OnTagEdited(std::optional<tags::tag_ptr> new_tag) {
@@ -183,8 +183,18 @@ void OnTagDeleted(tags::tag_ptr deleted_id) {
 }
 
 void Input() {
-    if ((keysDown() & KEY_SELECT) || (keysDown() & KEY_B) || (keysDown() & KEY_X) || (keysDown() & KEY_Y)) {
+    if ((keysDown() & KEY_SELECT) || (keysDown() & KEY_B)) {
         Close();
+    }
+
+    // Send specific key used to close for quickly
+    // changing between filter and hide tags menu
+    if (keysDown() & KEY_X) {
+        Close(KEY_X);
+    }
+
+    if (keysDown() & KEY_Y) {
+        Close(KEY_Y);
     }
 
     if (keysDown() & KEY_DLEFT) {
