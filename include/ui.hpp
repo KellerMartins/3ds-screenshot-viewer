@@ -45,8 +45,9 @@ void Input();
 void Render();
 void SetUiFunctions(void (*input_fn)(), void (*render_fn)(bool));
 
+bool CanRenderTopScreen();
 void ClearTargetScreen(TargetScreen screen, u32 clear_color = C2D_Color32(0x40, 0x40, 0x40, 0xFF));
-bool SetTargetScreen(TargetScreen screen);
+void SetTargetScreen(TargetScreen screen);
 
 void DrawLine(float x0, float y0, float x1, float y1, float thickness, u32 color);
 void DrawRect(float x, float y, float width, float height, u32 color);

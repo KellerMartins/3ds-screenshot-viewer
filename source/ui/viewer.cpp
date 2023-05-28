@@ -410,18 +410,22 @@ void DrawBottom() {
 }
 
 void DrawTop() {
-    if (!SetTargetScreen(TargetScreen::kTop)) return;
-
-    ClearTargetScreen(TargetScreen::kTop, clrBlack);
+    if (!CanRenderTopScreen()) return;
 
     if (hide_last_image || selected_screenshot == nullptr) {
+        gfxSet3D(false);
+        SetTargetScreen(TargetScreen::kTop);
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrBackground);
         SetTargetScreen(TargetScreen::kTopRight);
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrBackground);
         return;
     }
+
+    gfxSet3D(selected_screenshot->is_3d);
     int offset_3d = static_cast<int>(std::round(Get3DSlider() * settings::GetExtraStereoOffset()));
-    gfxSet3D(selected_screenshot->is_3d && !hide_last_image);
+
+    SetTargetScreen(TargetScreen::kTop);
+    ClearTargetScreen(TargetScreen::kTop, clrBlack);
     C2D_DrawImageAt(selected_screenshot->top, selected_screenshot->is_3d ? -offset_3d : 0, 0, 0);
 
     std::string num_selected = std::to_string(multi_selection_screenshots.size());

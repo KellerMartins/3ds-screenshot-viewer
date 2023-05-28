@@ -251,7 +251,8 @@ void Render(bool force) {
                  "Delete selected screenshots");
     }
 
-    if (SetTargetScreen(TargetScreen::kTop)) {
+    if (CanRenderTopScreen()) {
+        SetTargetScreen(TargetScreen::kTop);
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, "Settings");
 

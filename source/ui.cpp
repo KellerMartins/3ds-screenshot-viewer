@@ -79,25 +79,20 @@ void SetUiFunctions(void (*input_fn)(), void (*render_fn)(bool)) {
     input_function = input_fn;
     render_function = render_fn;
 }
+bool CanRenderTopScreen() { return !settings::ShowConsole(); }
 
-bool SetTargetScreen(TargetScreen screen) {
+void SetTargetScreen(TargetScreen screen) {
     switch (screen) {
         case TargetScreen::kTop:
-            if (settings::ShowConsole()) return false;
-
             C2D_SceneBegin(top_target);
             break;
         case TargetScreen::kTopRight:
-            if (settings::ShowConsole()) return false;
-
             C2D_SceneBegin(top_right_target);
             break;
         case TargetScreen::kBottom:
             C2D_SceneBegin(bottom_target);
             break;
     }
-
-    return true;
 }
 
 void ClearTargetScreen(TargetScreen screen, u32 clear_color) {

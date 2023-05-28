@@ -341,7 +341,8 @@ void Render(bool force) {
         DrawDownArrow(kBottomScreenWidth / 2, kBottomScreenHeight - kButtonHeight / 2, kButtonArrowSize);
     }
 
-    if (SetTargetScreen(TargetScreen::kTop)) {
+    if (CanRenderTopScreen()) {
+        SetTargetScreen(TargetScreen::kTop);
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, top_title);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite,

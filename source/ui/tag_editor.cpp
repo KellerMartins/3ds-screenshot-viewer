@@ -414,7 +414,8 @@ void Render(bool force) {
     }
 
     // Top screen
-    if (SetTargetScreen(TargetScreen::kTop)) {
+    if (CanRenderTopScreen()) {
+        SetTargetScreen(TargetScreen::kTop);
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 38, 1, clrWhite, creating_new_tag ? "Create tag" : "Edit tag");
 
