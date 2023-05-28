@@ -29,7 +29,8 @@ const int kHMargin = (kBottomScreenWidth - kNCols * kThumbnailWidth - (kNCols - 
 const int kVMargin = ((kBottomScreenHeight - kNavbarHeight) - kNRows * kThumbnailHeight - (kNRows - 1) * kThumbnailSpacing) / 2;
 
 const int kSelectionOutline = 2;
-const int kTagLineThickness = 4;
+const int kTagLineThickness = 3;
+const int kSelectedIndicatorSize = 6;
 
 const unsigned int kInputDebounceTicks = 20;
 const unsigned int kInputHoldTicks = 20;
@@ -332,6 +333,18 @@ void DrawInterface() {
             }
 
             if (multi_selection_mode) {
+                // Draw dark overlay on deselected screenshots
+                if (!is_selected_multi) {
+                    DrawRect(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, kThumbnailWidth,
+                             kThumbnailHeight, clrScreenshotOverlay);
+                } else {
+                    DrawCircle(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c + kThumbnailWidth - kSelectedIndicatorSize,
+                               kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r + kSelectedIndicatorSize - 1, kSelectedIndicatorSize, clrBackground);
+                    DrawCircle(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c + kThumbnailWidth - kSelectedIndicatorSize,
+                               kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r + kSelectedIndicatorSize - 1, kSelectedIndicatorSize - 2,
+                               screenshot->tags.size() == 0 ? clrButtons : screenshot->tags[0]->color);
+                }
+
                 // Draw tags
                 size_t num_tags = screenshot->tags.size();
                 int tag_x = kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - offset;
@@ -339,12 +352,6 @@ void DrawInterface() {
                     DrawRect(tag_x, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r + kThumbnailHeight - kTagLineThickness + offset,
                              (kThumbnailWidth + offset * 2) / num_tags, kTagLineThickness, tag->color);
                     tag_x += (kThumbnailWidth + offset * 2) / num_tags;
-                }
-
-                // Draw dark overlay on deselected screenshots
-                if (!is_selected_multi) {
-                    DrawRect(kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c, kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r, kThumbnailWidth,
-                             kThumbnailHeight, clrScreenshotOverlay);
                 }
             }
 
@@ -417,11 +424,24 @@ void DrawTop() {
     gfxSet3D(selected_screenshot->is_3d && !hide_last_image);
     C2D_DrawImageAt(selected_screenshot->top, selected_screenshot->is_3d ? -offset_3d : 0, 0, 0);
 
+    std::string num_selected = std::to_string(multi_selection_screenshots.size());
+    if (multi_selection_mode) {
+        DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
+        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, num_selected + " selected");
+        DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite, "Press B to exit selection mode");
+    }
+
     if (selected_screenshot->is_3d) {
         SetTargetScreen(TargetScreen::kTopRight);
         ClearTargetScreen(TargetScreen::kTopRight, clrBlack);
 
         C2D_DrawImageAt(selected_screenshot->top_right, offset_3d, 0, 0);
+
+        if (multi_selection_mode) {
+            DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
+            DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, num_selected + " selected");
+            DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite, "Press B to exit selection mode");
+        }
     }
 }
 
