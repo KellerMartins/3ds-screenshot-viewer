@@ -4,23 +4,29 @@
 #include <loadbmp.hpp>
 
 #include "screenshots.hpp"
+#include "settings.hpp"
+#include "tags.hpp"
 #include "ui.hpp"
 
 int main(int argc, char **argv) {
-    ui::init();
+    settings::Load();
+    tags::Load();
 
-    screenshots::find();
-    screenshots::load_thumbnails_start();
+    ui::Init();
+    screenshots::Init();
 
+    ui::Start();
     while (aptMainLoop()) {
-        ui::input();
-        if (ui::pressed_exit()) break;
+        screenshots::Update();
 
-        ui::render();
+        ui::Input();
+        if (ui::PressedExit()) break;
+
+        ui::Render();
     }
 
-    screenshots::load_thumbnails_stop();
-    ui::exit();
+    screenshots::Exit();
+    ui::Exit();
 
     return 0;
 }

@@ -3,20 +3,19 @@
 #include <3ds.h>
 #include <citro2d.h>
 #include <citro3d.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 #include <algorithm>
-#include <bit>
-#include <cstring>
+#include <atomic>
 #include <filesystem>
 #include <iostream>
+#include <list>
+#include <map>
 #include <string>
 #include <vector>
 
 #include "loadbmp.hpp"
+#include "settings.hpp"
+#include "tags.hpp"
 #include "ui.hpp"
 
 namespace screenshots {
@@ -27,15 +26,36 @@ enum SCRS_TYPE {
     BOTTOM = 2,
 };
 
+const int kStackSize = (4 * 1024);
+
 std::string suffixes[] = {"_top.bmp", "_top_right.bmp", "_bot.bmp"};
 
 std::vector<ScreenshotInfo> screenshots;
-int loaded_thumbs = 0;
 
-volatile bool run_thread = true;
+std::vector<size_t> screenshots_indexes;
+std::vector<size_t> screenshots_hidden;
+ScreenshotOrder screenshot_order = kTags;
+
+std::atomic<bool> run_thread = true;
+std::atomic<int> loaded_thumbs = 0;
+
+std::atomic<size_t> last_screenshot_index = std::numeric_limits<size_t>::max();
+std::atomic<size_t> loading_screenshot_index = std::numeric_limits<size_t>::max();
+size_t next_screenshot_index = std::numeric_limits<size_t>::max();
+
+// Use a screenshot for loading and another for returning to the callback
+Screenshot *screenshot_buffer[2];
+constexpr int num_buffers = (sizeof(screenshot_buffer) / sizeof(screenshot_buffer[0]));
+std::atomic<int> current_buffer = 0;
+int last_buffer = 0;
+
+void (*load_screenshot_callback)(screenshot_ptr) = nullptr;
+
 Thread thumbnailThread;
+Thread loadScreenshotThread;
+Handle loadScreenshotRequest;
 
-C2D_Image createImage(u16 width, u16 height) {
+C2D_Image CreateImage(u16 width, u16 height) {
     C3D_Tex *tex = new C3D_Tex;
     Tex3DS_SubTexture *subtex = new Tex3DS_SubTexture;
 
@@ -58,22 +78,68 @@ C2D_Image createImage(u16 width, u16 height) {
     return C2D_Image({tex, subtex});
 }
 
-void threadThumbnails(void *arg) {
-    for (size_t i = 0; i < screenshots.size() && run_thread; i++) {
-        screenshots[i].thumbnail = createImage(ui::kThumbnailWidth, ui::kThumbnailHeight);
+void LoadThumbnail(ScreenshotInfo *info) {
+    info->init_thumbnail();
 
-        unsigned int error =
-            loadbmp_to_texture(screenshots[i].path_top, screenshots[i].thumbnail.tex, ui::kThumbnailWidth, ui::kThumbnailHeight, ui::kThumbnailDownscale);
-        screenshots[i].hasThumbnail = !error;
+    unsigned int error = loadbmp_to_texture(info->path_top, info->thumbnail.tex, ui::kThumbnailWidth, ui::kThumbnailHeight, ui::kThumbnailDownscale);
+    info->has_thumbnail = !error;
+}
 
-        loaded_thumbs++;
+void ThreadLoadThumbnails(void *arg) {
+    auto initial_visible = screenshots_indexes;
+    auto initial_hidden = screenshots_hidden;
+
+    for (auto &indexes : std::vector<std::vector<size_t>>({initial_visible, initial_hidden})) {
+        for (size_t i = 0; i < indexes.size() && run_thread; i++) {
+            LoadThumbnail(&screenshots[indexes[i]]);
+
+            loaded_thumbs = loaded_thumbs + 1;
+        }
     }
 }
 
-void find() {
-    auto files = std::vector<std::string>();
+void ThreadLoadScreenshot(void *arg) {
+    while (run_thread) {
+        svcWaitSynchronization(loadScreenshotRequest, U64_MAX);
+        svcClearEvent(loadScreenshotRequest);
 
-    for (const auto &entry : std::filesystem::directory_iterator("/luma/screenshots")) files.push_back(entry.path());
+        size_t index = loading_screenshot_index;
+        if (index != last_screenshot_index && index < screenshots.size()) {
+            Screenshot *screenshot = screenshot_buffer[current_buffer];
+
+            unsigned int error;
+            if (screenshots[index].path_top_right.size() > 0) {
+                error = loadbmp_to_texture(screenshots[index].path_top_right, screenshot->top_right.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
+                if (error) {
+                    screenshot->is_3d = false;
+                } else {
+                    screenshot->is_3d = true;
+                }
+            } else {
+                screenshot->is_3d = false;
+            }
+
+            error = loadbmp_to_texture(screenshots[index].path_top, screenshot->top.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
+            if (error) {
+                memset(screenshot->top_right.tex->data, 0, screenshot->top_right.tex->size);
+                memset(screenshot->top.tex->data, 0, screenshot->top.tex->size);
+                screenshot->is_3d = false;
+            }
+
+            error = loadbmp_to_texture(screenshots[index].path_bottom, screenshot->bottom.tex, ui::kBottomScreenWidth, ui::kBottomScreenHeight);
+            if (error) {
+                memset(screenshot->bottom.tex->data, 0, screenshot->bottom.tex->size);
+            }
+
+            last_screenshot_index = index;
+        }
+    }
+}
+
+void SearchScreenshots() {
+    auto files = std::vector<std::filesystem::path>();
+
+    for (const auto &entry : std::filesystem::directory_iterator(settings::ScreenshotsPath())) files.push_back(entry.path());
 
     std::sort(files.begin(), files.end());
 
@@ -81,19 +147,14 @@ void find() {
         SCRS_TYPE type;
         std::string name;
 
+        std::string filename = files[i].filename().string();
         for (size_t s = 0; s < sizeof(suffixes) / sizeof(*suffixes); s++) {
-            if (files[i].ends_with(suffixes[s])) {
+            if (filename.ends_with(suffixes[s])) {
                 type = (SCRS_TYPE)s;
-                name = files[i].substr(0, files[i].size() - suffixes[s].size());
+                name = filename.substr(0, filename.size() - suffixes[s].size());
 
                 if (screenshots.size() == 0 || screenshots.back().name != name) {
-                    ScreenshotInfo newScreenshot;
-                    newScreenshot.name = name;
-                    newScreenshot.hasThumbnail = false;
-
-                    std::cout << name << "\n";
-
-                    screenshots.push_back(newScreenshot);
+                    screenshots.push_back(ScreenshotInfo(name, tags::GetScreenshotTags(name)));
                 }
 
                 ScreenshotInfo &scrs = screenshots.back();
@@ -115,56 +176,234 @@ void find() {
     }
 }
 
-#define STACKSIZE (4 * 1024)
-void load_thumbnails_start() {
-    s32 prio = 0;
-    svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
-    run_thread = true;
-    thumbnailThread = threadCreate(threadThumbnails, nullptr, STACKSIZE, prio - 1, -2, false);
+void UpdateOrder() {
+    std::list<size_t> filtered_screenshots;
+    screenshots_hidden.clear();
+
+    for (size_t i = 0; i < screenshots.size(); i++) {
+        if ((tags::GetTagsFilter().size() == 0 || screenshots[i].has_all_tag(tags::GetTagsFilter())) && !screenshots[i].has_any_tag(tags::GetHiddenTags())) {
+            filtered_screenshots.push_back(i);
+        } else {
+            screenshots_hidden.push_back(i);
+        }
+    }
+
+    screenshots_indexes.clear();
+    screenshots_indexes.reserve(filtered_screenshots.size());
+    switch (screenshot_order) {
+        case kNewer:
+            std::reverse(filtered_screenshots.begin(), filtered_screenshots.end());
+            // pass through
+        case kOlder:
+            std::copy(filtered_screenshots.begin(), filtered_screenshots.end(), std::back_inserter(screenshots_indexes));
+            break;
+        case kTags:
+        case kTagsNewer:
+            std::map<tags::tag_ptr, std::list<size_t>> index_groups = {{nullptr, {}}};
+            std::set<tags::tag_ptr> processed_tags;
+            std::vector<tags::tag_ptr> tags_order;
+
+            if (screenshot_order == kTagsNewer) {
+                std::reverse(filtered_screenshots.begin(), filtered_screenshots.end());
+            }
+
+            for (auto it = filtered_screenshots.begin(); it != filtered_screenshots.end(); ++it) {
+                auto screenshot_tags = screenshots[*it].tags;
+                if (screenshot_tags.size() == 0) {
+                    index_groups[nullptr].push_back(*it);
+                    continue;
+                }
+
+                if (!processed_tags.contains(screenshot_tags[0])) {
+                    index_groups[screenshot_tags[0]] = {*it};
+                    processed_tags.insert(screenshot_tags[0]);
+                    tags_order.push_back(screenshot_tags[0]);
+                } else {
+                    index_groups[screenshot_tags[0]].push_back(*it);
+                }
+            }
+            tags_order.push_back(nullptr);
+
+            if (screenshot_order == kTags) {
+                screenshots_indexes.insert(screenshots_indexes.end(), index_groups[nullptr].begin(), index_groups[nullptr].end());
+
+                for (size_t i = 0; i < tags::Count(); i++) {
+                    auto tag = tags::Get(i);
+                    if (processed_tags.contains(tag)) {
+                        auto group = index_groups[tag];
+                        group.sort([](size_t s1, size_t s2) {
+                            auto s1_tags = screenshots[s1].tags;
+                            auto s2_tags = screenshots[s2].tags;
+                            if (s1_tags.size() != s2_tags.size()) {
+                                // Order by number of tags (less first)
+                                return s1_tags.size() < s2_tags.size();
+                            } else {
+                                // Order by tag order (less first)
+                                int s1_sum = 0;
+                                int s2_sum = 0;
+                                for (auto tag : s1_tags) s1_sum += tags::GetTagIndex(tag);
+                                for (auto tag : s2_tags) s2_sum += tags::GetTagIndex(tag);
+
+                                return s1_sum < s2_sum;
+                            }
+                        });
+
+                        screenshots_indexes.insert(screenshots_indexes.end(), group.begin(), group.end());
+                    }
+                }
+            } else {
+                for (auto tag : tags_order) {
+                    auto group = index_groups[tag];
+                    screenshots_indexes.insert(screenshots_indexes.end(), group.begin(), group.end());
+                }
+            }
+            break;
+    }
 }
 
-void load_thumbnails_stop() {
+void Init() {
+    SearchScreenshots();
+    UpdateOrder();
+
+    for (int i = 0; i < num_buffers; i++) {
+        screenshot_buffer[i] = new Screenshot({
+            false,
+            CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
+            CreateImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
+            CreateImage(ui::kBottomScreenWidth, ui::kBottomScreenHeight),
+        });
+    }
+
+    s32 prio = 0;
+    svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
+    svcCreateEvent(&loadScreenshotRequest, RESET_ONESHOT);
+    run_thread = true;
+
+    thumbnailThread = threadCreate(ThreadLoadThumbnails, nullptr, kStackSize, prio - 1, -2, false);
+    loadScreenshotThread = threadCreate(ThreadLoadScreenshot, nullptr, kStackSize, prio - 1, -2, false);
+}
+
+void Exit() {
     run_thread = false;
     threadJoin(thumbnailThread, U64_MAX);
     threadFree(thumbnailThread);
+    svcSignalEvent(loadScreenshotRequest);
+    threadJoin(loadScreenshotThread, U64_MAX);
+    threadFree(loadScreenshotThread);
 }
 
-const Screenshot load(std::size_t index) {
-    static Screenshot screenshot = Screenshot({
-        false,
-        createImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
-        createImage(ui::kTopScreenWidth, ui::kTopScreenHeight),
-        createImage(ui::kBottomScreenWidth, ui::kBottomScreenHeight),
-    });
-
-    unsigned int error;
-    if (screenshots[index].path_top_right.size() > 0) {
-        error = loadbmp_to_texture(screenshots[index].path_top_right, screenshot.top_right.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
-        if (error) {
-            screenshot.is_3d = false;
-        } else {
-            screenshot.is_3d = true;
+void Update() {
+    if (load_screenshot_callback != nullptr) {
+        if (next_screenshot_index == last_screenshot_index) {
+            load_screenshot_callback(screenshot_buffer[current_buffer]);
+            load_screenshot_callback = nullptr;
+            last_buffer = current_buffer;
+            current_buffer = (current_buffer + 1) % num_buffers;
+        } else if (loading_screenshot_index == last_screenshot_index) {
+            loading_screenshot_index = next_screenshot_index;
+            svcSignalEvent(loadScreenshotRequest);
         }
-    } else {
-        screenshot.is_3d = false;
     }
-
-    error = loadbmp_to_texture(screenshots[index].path_top, screenshot.top.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
-    if (error) {
-        memset(screenshot.top_right.tex->data, 0, screenshot.top_right.tex->size);
-        memset(screenshot.top.tex->data, 0, screenshot.top.tex->size);
-        screenshot.is_3d = false;
-    }
-
-    error = loadbmp_to_texture(screenshots[index].path_bottom, screenshot.bottom.tex, ui::kBottomScreenWidth, ui::kBottomScreenHeight);
-    if (error) {
-        memset(screenshot.bottom.tex->data, 0, screenshot.bottom.tex->size);
-    }
-
-    return screenshot;
 }
-const ScreenshotInfo get_info(std::size_t index) { return screenshots[index]; }
-size_t size() { return screenshots.size(); }
-int num_loaded_thumbs() { return loaded_thumbs; }
 
+void Load(std::size_t index, void (*callback)(screenshot_ptr)) {
+    if (index >= screenshots_indexes.size()) {
+        callback(nullptr);
+        return;
+    }
+
+    index = screenshots_indexes[index];
+    if (index == next_screenshot_index) {
+        if (load_screenshot_callback == nullptr) callback(screenshot_buffer[last_buffer]);
+        return;
+    }
+
+    next_screenshot_index = index;
+    load_screenshot_callback = callback;
+}
+
+size_t Count() { return screenshots_indexes.size(); }
+size_t NumLoadedThumbnails() { return loaded_thumbs; }
+bool FoundScreenshots() { return screenshots.size() > 0; }
+
+info_ptr GetInfo(std::size_t index) {
+    if (index >= screenshots_indexes.size()) return nullptr;
+    return &screenshots[screenshots_indexes[index]];
+}
+
+const ScreenshotOrder GetOrder() { return screenshot_order; }
+void SetOrder(ScreenshotOrder order) {
+    screenshot_order = order;
+    UpdateOrder();
+}
+
+void Delete(std::set<std::string> screenshot_names) {
+    std::vector<ScreenshotInfo> new_screenshots;
+    std::vector<ScreenshotInfo> deleted_screenshots;
+    for (size_t i = 0; i < screenshots.size(); i++) {
+        if (screenshot_names.contains(screenshots[i].name)) {
+            deleted_screenshots.push_back(std::move(screenshots[i]));
+        } else {
+            new_screenshots.push_back(std::move(screenshots[i]));
+        }
+    }
+
+    // Wait until the thumbnail thread has finished loading
+    threadJoin(thumbnailThread, U64_MAX);
+
+    screenshots = std::move(new_screenshots);
+
+    for (auto &screenshot : deleted_screenshots) {
+        try {
+            if (screenshot.path_top != "") std::filesystem::remove(screenshot.path_top);
+            if (screenshot.path_top_right != "") std::filesystem::remove(screenshot.path_top_right);
+            if (screenshot.path_bottom != "") std::filesystem::remove(screenshot.path_bottom);
+        } catch (const std::filesystem::filesystem_error &err) {
+            std::cout << "Error deleting screenshots: " << err.what() << '\n';
+        }
+    }
+
+    tags::RemoveScreenshotsTags(screenshot_names);
+    UpdateOrder();
+}
+
+bool ScreenshotInfo::has_any_tag(std::set<tags::tag_ptr> tags) {
+    for (auto &tag : this->tags) {
+        if (tags.contains(tag)) return true;
+    }
+    return false;
+}
+
+bool ScreenshotInfo::has_all_tag(std::set<tags::tag_ptr> tags) {
+    for (auto &tag : tags) {
+        if (std::find(this->tags.begin(), this->tags.end(), tag) == this->tags.end()) return false;
+    }
+    return true;
+}
+
+void ScreenshotInfo::init_thumbnail() { thumbnail = CreateImage(ui::kThumbnailWidth, ui::kThumbnailHeight); }
+
+ScreenshotInfo::~ScreenshotInfo() {
+    if (thumbnail.tex != nullptr || thumbnail.subtex != nullptr) {
+        C3D_TexDelete(thumbnail.tex);
+        delete thumbnail.tex;
+        delete thumbnail.subtex;
+    }
+}
+
+ScreenshotInfo::ScreenshotInfo(std::string name, const std::vector<tags::tag_ptr> &tags) : name(name), tags(tags), has_thumbnail(false) {}
+ScreenshotInfo::ScreenshotInfo(ScreenshotInfo &&other)
+    : name(std::move(other.name)),
+
+      path_top(std::move(other.path_top)),
+      path_top_right(std::move(other.path_top_right)),
+      path_bottom(std::move(other.path_bottom)),
+
+      tags(other.tags),
+      has_thumbnail(other.has_thumbnail),
+
+      thumbnail(std::move(other.thumbnail)) {
+    other.thumbnail.tex = nullptr;
+    other.thumbnail.subtex = nullptr;
+}
 }  // namespace screenshots

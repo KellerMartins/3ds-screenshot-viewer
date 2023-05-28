@@ -1,7 +1,14 @@
+#ifndef SCREENSHOTS_HPP_
+#define SCREENSHOTS_HPP_
+
 #include <3ds.h>
 #include <citro2d.h>
 
+#include <set>
 #include <string>
+#include <vector>
+
+#include "tags.hpp"
 
 namespace screenshots {
 struct Screenshot {
@@ -13,20 +20,58 @@ struct Screenshot {
 
 struct ScreenshotInfo {
     std::string name;
+
     std::string path_top;
     std::string path_top_right;
     std::string path_bottom;
-    bool hasThumbnail;
+
+    const std::vector<tags::tag_ptr>& tags;
+
+    bool has_thumbnail;
     C2D_Image thumbnail;
+
+    ScreenshotInfo(std::string name, const std::vector<tags::tag_ptr>& tags);
+    ScreenshotInfo(ScreenshotInfo&& other);
+    ~ScreenshotInfo();
+
+    ScreenshotInfo(const ScreenshotInfo&) = delete;
+    ScreenshotInfo& operator=(const ScreenshotInfo& other) = delete;
+    ScreenshotInfo& operator=(const ScreenshotInfo&& other) = delete;
+
+    void init_thumbnail();
+
+    bool has_any_tag(std::set<tags::tag_ptr> tags);
+    bool has_all_tag(std::set<tags::tag_ptr> tags);
 };
 
-void find();
-void load_thumbnails_start();
-void load_thumbnails_stop();
+enum ScreenshotOrder {
+    kTags = 0,
+    kTagsNewer = 1,
+    kOlder = 2,
+    kNewer = 3,
 
-const screenshots::Screenshot load(std::size_t index);
-const ScreenshotInfo get_info(std::size_t index);
-size_t size();
-int num_loaded_thumbs();
+    kFirst = kTags,
+    kLast = kNewer,
+};
 
+using screenshot_ptr = const Screenshot*;
+using info_ptr = const ScreenshotInfo*;
+
+void Init();
+void Update();
+void Exit();
+
+void Delete(std::set<std::string> screenshot_names);
+void Load(std::size_t index, void (*callback)(screenshot_ptr));
+info_ptr GetInfo(std::size_t index);
+
+size_t Count();
+size_t NumLoadedThumbnails();
+bool FoundScreenshots();
+
+const ScreenshotOrder GetOrder();
+void SetOrder(ScreenshotOrder order);
+void UpdateOrder();
 }  // namespace screenshots
+
+#endif  // SCREENSHOTS_HPP_
