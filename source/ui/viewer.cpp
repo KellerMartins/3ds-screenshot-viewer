@@ -58,7 +58,7 @@ unsigned int GetPageIndex(int x) { return x / (kNRows * kNCols); }
 unsigned int GetLastPageIndex() { return GetPageIndex(screenshots::Count() - 1); }
 
 void DrawBottom();
-void DrawTop();
+void DrawTop(bool);
 
 void OnLoadScreenshot(screenshots::screenshot_ptr screenshot);
 void OnSelectScreenshotTags(bool, int, std::set<tags::tag_ptr>);
@@ -300,7 +300,7 @@ void Input() {
 
 void Render(bool force) {
     if (force || changed_selection || changed_screen) {
-        DrawTop();
+        DrawTop(force);
         DrawBottom();
     }
 
@@ -409,7 +409,7 @@ void DrawBottom() {
         C2D_DrawImageAt(selected_screenshot->bottom, 0, 0, 0);
 }
 
-void DrawTop() {
+void DrawTop(bool force) {
     if (!CanRenderTopScreen()) return;
 
     if (hide_last_image || selected_screenshot == nullptr) {
@@ -429,7 +429,7 @@ void DrawTop() {
     C2D_DrawImageAt(selected_screenshot->top, selected_screenshot->is_3d ? -offset_3d : 0, 0, 0);
 
     std::string num_selected = std::to_string(multi_selection_screenshots.size());
-    if (multi_selection_mode) {
+    if (multi_selection_mode && !force) {
         DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, num_selected + " selected");
         DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite, "Press B to exit selection mode");
@@ -441,7 +441,7 @@ void DrawTop() {
 
         C2D_DrawImageAt(selected_screenshot->top_right, offset_3d, 0, 0);
 
-        if (multi_selection_mode) {
+        if (multi_selection_mode && !force) {
             DrawRect(0, 0, kTopScreenWidth, kTopScreenHeight, clrOverlay);
             DrawText(kTopScreenWidth / 2, kTopScreenHeight - 45, 1, clrWhite, num_selected + " selected");
             DrawText(kTopScreenWidth / 2, kTopScreenHeight - 15, 0.4, clrWhite, "Press B to exit selection mode");
