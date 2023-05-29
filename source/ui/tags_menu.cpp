@@ -92,8 +92,8 @@ float reduced_menu_height = 0;
 float reduced_menu_tags_offset = 0;
 
 touchPosition touch;
+bool changed_initial_selection = false;
 bool touched_down;
-bool changed_initial_selection;
 bool changed;
 
 void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, int, std::set<tags::tag_ptr>)) {
@@ -103,7 +103,6 @@ void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> sele
     top_title = title;
     can_create_tags = allow_create_tag;
     return_callback = callback;
-    changed_initial_selection = false;
     touched_down = false;
     ticks_touch_held = 0;
     tag_rows = {TagRow()};
@@ -157,6 +156,7 @@ void Close(int key = 0) {
     }
 
     return_callback(changed_initial_selection, key, selected);
+    changed_initial_selection = false;
 }
 
 void OnTagEdited(std::optional<tags::tag_ptr> new_tag) {
