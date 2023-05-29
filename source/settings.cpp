@@ -15,10 +15,10 @@
 
 namespace settings {
 
-const std::string app_folder_path = "/3ds/Screenshot-Viewer/";
+const std::string app_folder_path = "/3ds/ScreenshotViewer/";
 const std::string setings_path = app_folder_path + "settings.toml";
+const std::string tags_path = app_folder_path + "tags.toml";
 
-std::string tags_path = app_folder_path + "tags.toml";
 std::string screenshots_path = "/luma/screenshots";
 
 int extra_stereo_offset = 7;
@@ -43,7 +43,6 @@ void Load() {
         toml::table data = std::move(result).table();
 
         screenshots_path = data["screenshots_path"].value_or(screenshots_path);
-        tags_path = data["tags_path"].value_or(tags_path);
         show_console = data["show_console"].value_or(show_console);
         extra_stereo_offset = data["extra_stereo_offset"].value_or(extra_stereo_offset);
 
