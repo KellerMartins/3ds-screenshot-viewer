@@ -120,12 +120,6 @@ elf: $(BUILD) $(OUTPUT_DIR)
 citra: $(BUILD) $(OUTPUT_DIR)
 	@make --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile $@
 
-hblauncher: $(BUILD) $(OUTPUT_DIR)
-	@make --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile $@
-
-fbi: $(BUILD) $(OUTPUT_DIR)
-	@make --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile $@
-
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 
@@ -200,7 +194,7 @@ endif
 #---------------------------------------------------------------------------------
 # Main Targets
 #---------------------------------------------------------------------------------
-.PHONY: all 3dsx cia elf 3ds citra fbi hblauncher
+.PHONY: all 3dsx cia elf 3ds citra
 all: $(OUTPUT_FILE).zip $(OUTPUT_FILE).3ds $(OUTPUT_FILE).cia
 
 banner.bnr: $(BANNER_IMAGE_FILE) $(BANNER_AUDIO_FILE)
