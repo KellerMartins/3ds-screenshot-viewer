@@ -61,9 +61,9 @@ void DrawBottom();
 void DrawTop(bool);
 
 void OnLoadScreenshot(screenshots::screenshot_ptr screenshot);
-void OnSelectScreenshotTags(bool, int, std::set<tags::tag_ptr>);
-void OnSelectFilterTags(bool, int, std::set<tags::tag_ptr>);
-void OnSelectHideTags(bool, int, std::set<tags::tag_ptr>);
+void OnSelectScreenshotTags(std::set<tags::tag_ptr>, std::set<tags::tag_ptr>, int);
+void OnSelectFilterTags(std::set<tags::tag_ptr>, std::set<tags::tag_ptr>, int);
+void OnSelectHideTags(std::set<tags::tag_ptr>, std::set<tags::tag_ptr>, int);
 void OpenSettingsMenu();
 void OpenSetTagsMenu();
 void OpenHideTagsMenu();
@@ -457,18 +457,18 @@ void OnLoadScreenshot(screenshots::screenshot_ptr screenshot) {
     changed_screen = true;
 }
 
-void OnSelectScreenshotTags(bool changed_initial_selection, int key_pressed, std::set<tags::tag_ptr> tags) {
-    if (changed_initial_selection) {
-        tags::SetScreenshotsTags(multi_selection_screenshots, tags);
+void OnSelectScreenshotTags(std::set<tags::tag_ptr> added_tags, std::set<tags::tag_ptr> removed_tags, int key_pressed) {
+    if (added_tags.size() > 0 || removed_tags.size() > 0) {
+        tags::ChangeScreenshotsTags(multi_selection_screenshots, added_tags, removed_tags);
         multi_selection_screenshots.clear();
         multi_selection_mode = false;
     }
     Show();
 }
 
-void OnSelectFilterTags(bool changed_initial_selection, int key_pressed, std::set<tags::tag_ptr> tags) {
-    if (changed_initial_selection) {
-        tags::SetTagsFilter(tags);
+void OnSelectFilterTags(std::set<tags::tag_ptr> added_tags, std::set<tags::tag_ptr> removed_tags, int key_pressed) {
+    if (added_tags.size() > 0 || removed_tags.size() > 0) {
+        tags::ChangeTagsFilter(added_tags, removed_tags);
         selected_index = 0;
         page_index = 0;
         hide_last_image = true;
@@ -483,9 +483,9 @@ void OnSelectFilterTags(bool changed_initial_selection, int key_pressed, std::se
     }
 }
 
-void OnSelectHideTags(bool changed_initial_selection, int key_pressed, std::set<tags::tag_ptr> tags) {
-    if (changed_initial_selection) {
-        tags::SetHiddenTags(tags);
+void OnSelectHideTags(std::set<tags::tag_ptr> added_tags, std::set<tags::tag_ptr> removed_tags, int key_pressed) {
+    if (added_tags.size() > 0 || removed_tags.size() > 0) {
+        tags::ChangeHiddenTags(added_tags, removed_tags);
         selected_index = selected_index >= screenshots::Count() ? screenshots::Count() : selected_index + 1;
         selected_index = selected_index > 0 ? selected_index - 1 : 0;
         page_index = GetPageIndex(selected_index);

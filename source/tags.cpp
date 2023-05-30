@@ -181,12 +181,19 @@ tag_ptr Get(size_t index) { return tags[index]; }
 
 size_t Count() { return tags.size(); }
 
-void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_ptr> tags_set) {
+void ChangeScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_tags) {
     for (const std::string& name : screenshot_names) {
-        screenshot_tags[name] = {};
+        auto new_tags = std::set<tag_ptr>(screenshot_tags[name].begin(), screenshot_tags[name].end());
+        for (auto tag : added_tags) {
+            new_tags.insert(tag);
+        }
+        for (auto tag : removed_tags) {
+            new_tags.erase(tag);
+        }
 
+        screenshot_tags[name] = {};
         for (auto tag : tags) {  // Iterates through all tags so the inserted order matches the tags order
-            if (tags_set.contains(tag)) {
+            if (new_tags.contains(tag)) {
                 screenshot_tags[name].push_back(tag);
             }
         }
@@ -263,15 +270,17 @@ const std::set<tags::tag_ptr> GetTagsFilter() { return tags_filter; }
 
 const std::set<tags::tag_ptr> GetHiddenTags() { return hidden_tags; }
 
-void SetTagsFilter(std::set<tags::tag_ptr> tags) {
-    tags_filter = tags;
+void ChangeTagsFilter(std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_tags) {
+    for (auto tag : added_tags) tags_filter.insert(tag);
+    for (auto tag : removed_tags) tags_filter.erase(tag);
 
     Save();
     screenshots::UpdateOrder();
 }
 
-void SetHiddenTags(std::set<tags::tag_ptr> tags) {
-    hidden_tags = tags;
+void ChangeHiddenTags(std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_tags) {
+    for (auto tag : added_tags) hidden_tags.insert(tag);
+    for (auto tag : removed_tags) hidden_tags.erase(tag);
 
     Save();
     screenshots::UpdateOrder();

@@ -28,10 +28,10 @@ const std::set<tags::tag_ptr> GetHiddenTags();
 
 size_t Count();
 
-void SetScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_ptr> tags);
+void ChangeScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_tags);
 void RemoveScreenshotsTags(std::set<std::string> screenshot_names);
-void SetTagsFilter(std::set<tags::tag_ptr> tags);
-void SetHiddenTags(std::set<tags::tag_ptr> tags);
+void ChangeTagsFilter(std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_tags);
+void ChangeHiddenTags(std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_tags);
 
 tag_ptr AddTag(Tag new_tag);
 void ReplaceTag(tag_ptr tag, Tag new_tag);

@@ -84,7 +84,11 @@ struct TagRow {
 std::string top_title;
 std::vector<TagRow> tag_rows;
 bool can_create_tags;
-void (*return_callback)(bool, int, std::set<tags::tag_ptr>);
+void (*return_callback)(std::set<tags::tag_ptr>, std::set<tags::tag_ptr>, int);
+
+std::set<tags::tag_ptr> initial_selection;
+std::set<tags::tag_ptr> added_tags;
+std::set<tags::tag_ptr> removed_tags;
 
 unsigned int row_offset = 0;
 unsigned int ticks_touch_held = 0;
@@ -92,16 +96,17 @@ float reduced_menu_height = 0;
 float reduced_menu_tags_offset = 0;
 
 touchPosition touch;
-bool changed_initial_selection = false;
 bool touched_down;
 bool changed;
 
-void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> selected_tags, void (*callback)(bool, int, std::set<tags::tag_ptr>)) {
+void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> selected_tags,
+          void (*callback)(std::set<tags::tag_ptr>, std::set<tags::tag_ptr>, int)) {
     changed = true;
     SetUiFunctions(Input, Render);
 
     top_title = title;
     can_create_tags = allow_create_tag;
+    initial_selection = selected_tags;
     return_callback = callback;
     touched_down = false;
     ticks_touch_held = 0;
@@ -109,7 +114,8 @@ void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> sele
 
     for (int index = 0; index < static_cast<int>(tags::Count()); index++) {
         auto tag = tags::Get(index);
-        TagItem item = TagItem(tag, index, selected_tags.contains(tag));
+        bool selected = added_tags.contains(tag) || (initial_selection.contains(tag) && !removed_tags.contains(tag));
+        TagItem item = TagItem(tag, index, selected);
 
         if (tag_rows.back().width > 0 && tag_rows.back().width + item.width + kTagMargin > kMenuWidth) {
             tag_rows.push_back(TagRow());
@@ -134,52 +140,26 @@ void Show(std::string title, bool allow_create_tag, std::set<tags::tag_ptr> sele
     }
 }
 
-std::set<tags::tag_ptr> GetSelectedTags() {
-    std::set<tags::tag_ptr> selected;
-
-    for (TagRow& row : tag_rows) {
-        for (TagItem& item : row.items) {
-            if (item.selected) {
-                selected.insert(item.tag);
-            }
-        }
-    }
-
-    return selected;
-}
-
 void Close(int key = 0) {
-    std::set<tags::tag_ptr> selected;
-
-    if (changed_initial_selection) {
-        selected = GetSelectedTags();
-    }
-
-    return_callback(changed_initial_selection, key, selected);
-    changed_initial_selection = false;
+    return_callback(added_tags, removed_tags, key);
+    added_tags.clear();
+    removed_tags.clear();
 }
 
 void OnTagEdited(std::optional<tags::tag_ptr> new_tag) {
-    auto selected_tags = GetSelectedTags();
-    bool created_new_tag = new_tag.has_value();
-    if (created_new_tag) {
-        selected_tags.insert(new_tag.value());
+    if (new_tag.has_value()) {
+        added_tags.insert(new_tag.value());
     }
 
-    Show(top_title, can_create_tags, selected_tags, return_callback);
-
-    if (created_new_tag) {
-        changed_initial_selection = true;
-    }
+    Show(top_title, can_create_tags, initial_selection, return_callback);
 }
 
 void OnTagDeleted(tags::tag_ptr deleted_id) {
-    auto selected_tags = GetSelectedTags();
-    if (selected_tags.contains(deleted_id)) {
-        selected_tags.erase(selected_tags.find(deleted_id));
+    if (initial_selection.contains(deleted_id)) {
+        removed_tags.insert(deleted_id);
     }
 
-    Show(top_title, can_create_tags, selected_tags, return_callback);
+    Show(top_title, can_create_tags, initial_selection, return_callback);
 }
 
 void Input() {
@@ -280,7 +260,13 @@ void Input() {
             if (touched_tag != nullptr) {
                 touched_tag->selected = !touched_tag->selected;
                 changed = true;
-                changed_initial_selection = true;
+                if (touched_tag->selected) {
+                    removed_tags.erase(touched_tag->tag);
+                    added_tags.insert(touched_tag->tag);
+                } else {
+                    removed_tags.insert(touched_tag->tag);
+                    added_tags.erase(touched_tag->tag);
+                }
                 return;
             }
             y += kTagRowOffsetY;
