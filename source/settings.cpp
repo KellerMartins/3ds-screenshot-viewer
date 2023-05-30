@@ -27,7 +27,6 @@ bool show_console = false;
 void Save() {
     std::ofstream f(setings_path);
     f << "screenshots_path = \"" << screenshots_path << "\"\n"
-      << "tags_path = \"" << tags_path << "\"\n"
       << "# 0 - Tags, 1 - Tags (newer first), 2 - Older, 3 - Newer\n"
       << "screenshot_order = " << screenshots::GetOrder() << "\n"
       << "extra_stereo_offset = " << extra_stereo_offset << "\n"
