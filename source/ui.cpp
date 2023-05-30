@@ -38,6 +38,15 @@ void Init() {
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
 
+    C2D_SceneBegin(top_target);
+    C2D_TargetClear(top_target, clrBackground);
+
+    C2D_SceneBegin(top_right_target);
+    C2D_TargetClear(top_right_target, clrBackground);
+
+    C2D_SceneBegin(bottom_target);
+    C2D_TargetClear(bottom_target, clrBackground);
+
     if (settings::ShowConsole()) consoleInit(GFX_TOP, NULL);
 }
 
@@ -54,7 +63,7 @@ void Exit() {
 
 void Input() {
     hidScanInput();
-    if (keysHeld() & KEY_START) {
+    if (keysHeld() & KEY_START && envIsHomebrew()) {
         pressed_exit_button = true;
         return;
     }
