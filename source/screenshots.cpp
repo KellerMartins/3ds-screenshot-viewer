@@ -225,8 +225,6 @@ void UpdateOrder() {
             tags_order.push_back(nullptr);
 
             if (screenshot_order == kTags) {
-                screenshots_indexes.insert(screenshots_indexes.end(), index_groups[nullptr].begin(), index_groups[nullptr].end());
-
                 for (size_t i = 0; i < tags::Count(); i++) {
                     auto tag = tags::Get(i);
                     if (processed_tags.contains(tag)) {
@@ -251,6 +249,8 @@ void UpdateOrder() {
                         screenshots_indexes.insert(screenshots_indexes.end(), group.begin(), group.end());
                     }
                 }
+
+                screenshots_indexes.insert(screenshots_indexes.end(), index_groups[nullptr].begin(), index_groups[nullptr].end());
             } else {
                 for (auto tag : tags_order) {
                     auto group = index_groups[tag];
