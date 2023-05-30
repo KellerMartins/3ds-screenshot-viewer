@@ -36,6 +36,10 @@ void Save() {
 }
 
 void Load() {
+    if (!std::filesystem::is_directory(app_folder_path) || !std::filesystem::exists(app_folder_path)) {
+        std::filesystem::create_directories(app_folder_path);
+    }
+
     if (std::filesystem::exists(setings_path)) {
         toml::parse_result result = toml::parse_file(setings_path);
         if (!result) return;
