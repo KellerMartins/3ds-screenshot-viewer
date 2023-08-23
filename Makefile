@@ -21,17 +21,18 @@ OUTPUT := output
 SOURCES := source
 DATA := data
 INCLUDES := $(SOURCES) include
-ROMFS := romfs
 RESOURCES := resources
+#ROMFS := romfs
 
 #---------------------------------------------------------------------------------
 # Resource Setup
 #---------------------------------------------------------------------------------
+DARK := false
 APP_INFO := $(RESOURCES)/AppInfo
-BANNER_AUDIO := $(RESOURCES)/audio
-BANNER_IMAGE := $(RESOURCES)/banner
-ICON := $(RESOURCES)/icon.png
 RSF := $(TOPDIR)/$(RESOURCES)/template.rsf
+BANNER_AUDIO := $(RESOURCES)/audio
+BANNER_IMAGE := $(if $(findstring true,$(DARK)),$(RESOURCES)/banner_dark,$(RESOURCES)/banner)
+ICON := $(if $(findstring true,$(DARK)),$(RESOURCES)/icon_dark.png,$(RESOURCES)/icon.png)
 
 #---------------------------------------------------------------------------------
 # Build Setup (code generation)
@@ -167,27 +168,33 @@ endif
 EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
 OUTPUT_NAME := $(subst $(SPACE),,$(APP_TITLE))
+OUTPUT_NAME := $(if $(findstring true,$(DARK)),$(OUTPUT_NAME)_dark,$(OUTPUT_NAME))
 OUTPUT_DIR := $(TOPDIR)/$(OUTPUT)
 OUTPUT_FILE := $(OUTPUT_DIR)/$(OUTPUT_NAME)
 
 APP_ICON := $(TOPDIR)/$(ICON)
 APP_ROMFS := $(TOPDIR)/$(ROMFS)
 
-COMMON_MAKEROM_PARAMS := -rsf $(RSF) -target t -exefslogo -elf $(OUTPUT_FILE).elf -icon icon.icn -banner banner.bnr \
+ICON_ICN := $(if $(findstring true,$(DARK)),icon_dark.icn,icon.icn)
+BANNER_BNR := $(if $(findstring true,$(DARK)),banner_dark.bnr,banner.bnr)
+
+COMMON_MAKEROM_PARAMS := -rsf $(RSF) -target t -exefslogo -elf $(OUTPUT_FILE).elf -icon $(ICON_ICN) -banner $(BANNER_BNR) \
 	-DAPP_TITLE="$(APP_TITLE)" -DAPP_PRODUCT_CODE="$(APP_PRODUCT_CODE)" -DAPP_UNIQUE_ID="$(APP_UNIQUE_ID)" \
-	-DAPP_ROMFS="$(APP_ROMFS)" -DAPP_SYSTEM_MODE="64MB" -DAPP_SYSTEM_MODE_EXT="Legacy" -major "$(APP_VER_MAJOR)" \
+	$(if $(ROMFS),-DAPP_ROMFS="$(APP_ROMFS)",) -DAPP_SYSTEM_MODE="64MB" -DAPP_SYSTEM_MODE_EXT="Legacy" -major "$(APP_VER_MAJOR)" \
 	-minor "$(APP_VER_MINOR)" -micro "$(APP_VER_MICRO)"
 
 ifeq ($(OS),Windows_NT)
 	MAKEROM = makerom.exe
 	BANNERTOOL = bannertool.exe
+	CITRA = citra.exe
 else
 	MAKEROM = makerom
 	BANNERTOOL = bannertool
+	CITRA = citra
 endif
 
 _3DSXFLAGS += --smdh=$(OUTPUT_FILE).smdh
-ifneq ("$(wildcard $(TOPDIR)/$(ROMFS))","")
+ifneq ($(ROMFS),)
 	_3DSXFLAGS += --romfs=$(TOPDIR)/$(ROMFS)
 endif
 
@@ -197,21 +204,21 @@ endif
 .PHONY: all 3dsx cia elf 3ds citra
 all: $(OUTPUT_FILE).zip $(OUTPUT_FILE).3ds $(OUTPUT_FILE).cia
 
-banner.bnr: $(BANNER_IMAGE_FILE) $(BANNER_AUDIO_FILE)
-	@$(BANNERTOOL) makebanner $(BANNER_IMAGE_ARG) $(BANNER_AUDIO_ARG) -o banner.bnr > /dev/null
+$(BANNER_BNR): $(BANNER_IMAGE_FILE) $(BANNER_AUDIO_FILE)
+	@$(BANNERTOOL) makebanner $(BANNER_IMAGE_ARG) $(BANNER_AUDIO_ARG) -o $(BANNER_BNR) > /dev/null
 
-icon.icn: $(TOPDIR)/$(ICON)
-	@$(BANNERTOOL) makesmdh -s "$(APP_TITLE)" -l "$(APP_TITLE)" -p "$(APP_AUTHOR)" -i $(TOPDIR)/$(ICON) -o icon.icn > /dev/null
+$(ICON_ICN): $(TOPDIR)/$(ICON)
+	@$(BANNERTOOL) makesmdh -s "$(APP_TITLE)" -l "$(APP_TITLE)" -p "$(APP_AUTHOR)" -i $(TOPDIR)/$(ICON) -o $(ICON_ICN) > /dev/null
 
 $(OUTPUT_FILE).elf: $(OFILES)
 
 $(OUTPUT_FILE).3dsx: $(OUTPUT_FILE).elf $(OUTPUT_FILE).smdh
 
-$(OUTPUT_FILE).3ds: $(OUTPUT_FILE).elf banner.bnr icon.icn
+$(OUTPUT_FILE).3ds: $(OUTPUT_FILE).elf $(BANNER_BNR) $(ICON_ICN)
 	@$(MAKEROM) -f cci -o $(OUTPUT_FILE).3ds -DAPP_ENCRYPTED=true $(COMMON_MAKEROM_PARAMS)
 	@echo "built ... $(notdir $@)"
 
-$(OUTPUT_FILE).cia: $(OUTPUT_FILE).elf banner.bnr icon.icn
+$(OUTPUT_FILE).cia: $(OUTPUT_FILE).elf $(BANNER_BNR) $(ICON_ICN)
 	@$(MAKEROM) -f cia -o $(OUTPUT_FILE).cia -DAPP_ENCRYPTED=false $(COMMON_MAKEROM_PARAMS)
 	@echo "built ... $(notdir $@)"
 
@@ -233,7 +240,7 @@ cia : $(OUTPUT_FILE).cia
 elf : $(OUTPUT_FILE).elf
 
 citra : $(OUTPUT_FILE).3dsx
-	citra $(OUTPUT_FILE).3dsx
+	$(CITRA) $(OUTPUT_FILE).3dsx
 
 #---------------------------------------------------------------------------------
 # you need a rule like this for each extension you use as binary data
