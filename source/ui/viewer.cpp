@@ -32,7 +32,6 @@ const int kSelectionOutline = 2;
 const int kTagLineThickness = 3;
 const int kSelectedIndicatorSize = 6;
 
-const unsigned int kInputDebounceTicks = 20;
 const unsigned int kInputHoldTicks = 20;
 
 const u32 clrScreenshotOverlay = C2D_Color32(0x00, 0x00, 0x00, 0x9F);
@@ -45,7 +44,6 @@ size_t page_index = 0;
 size_t last_loaded_thumbs = 0;
 unsigned int ticks_touch_held = 0;
 unsigned int ticks_a_held = 0;
-unsigned int ticks_since_last_input;
 
 bool show_ui = true;
 bool multi_selection_mode = false;
@@ -75,7 +73,6 @@ void Show() {
     changed_screen = true;
     changed_selection = true;
     touched_down = false;
-    ticks_since_last_input = kInputDebounceTicks;
     SetUiFunctions(Input, Render);
 }
 
@@ -158,16 +155,9 @@ void TouchHoldActions() {
 }
 
 void Input() {
-    if (!keysDown()) {
-        ticks_since_last_input = ticks_since_last_input < kInputDebounceTicks ? ticks_since_last_input + 1 : kInputDebounceTicks;
-    } else {
-        ticks_since_last_input = 0;
-    }
-
     if (keysDown() & KEY_TOUCH) {
         touched_down = true;
         TouchDownActions();
-        ticks_since_last_input = kInputDebounceTicks;  // Debounce is not used for touch actions
     }
 
     if (keysUp() & KEY_TOUCH) {
@@ -288,11 +278,10 @@ void Input() {
         if (show_ui) changed_screen = true;
     }
 
-    if (changed_selection && ticks_since_last_input >= kInputDebounceTicks) {
+    if (changed_selection) {
         screenshots::Load(selected_index, OnLoadScreenshot);
         changed_selection = false;
         changed_screen = true;
-        ticks_since_last_input = 0;
     }
 }
 
@@ -382,7 +371,7 @@ void DrawInterface() {
     if (!screenshots::FoundScreenshots()) {
         DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 - 50, 0.8, clrButtons, "No screenshot");
         DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2 - 25, 0.8, clrButtons, "found at");
-        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2, 0.8, clrButtons, settings::ScreenshotsPath());
+        DrawText(kBottomScreenWidth / 2, kBottomScreenHeight / 2, 0.8, clrButtons, "\"sdmc:/" + settings::ScreenshotsPath() + "\"");
     }
 
     // Draw navbar buttons
