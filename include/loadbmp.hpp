@@ -62,9 +62,11 @@
 
 #include <citro3d.h>
 
+#include <functional>
 #include <string>
 
-LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, u32 width, u32 height, u32 stride = 1);
+LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned int(unsigned int, unsigned int, unsigned int, char *)> callback);
+LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, u32 stride = 1);
 
 #ifdef LOADBMP_IMPLEMENTATION
 
@@ -75,7 +77,7 @@ LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, 
 #include <string>
 #include <vector>
 
-LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, u32 width, u32 height, u32 stride) {
+LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned int(unsigned int, unsigned int, unsigned int, char *)> callback) {
     FILE *f = fopen(filename.c_str(), "rb");
 
     if (!f) return LOADBMP_FILE_NOT_FOUND;
@@ -85,7 +87,7 @@ LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, 
 
     thread_local std::vector<char> bmp_img;
 
-    u32 w, h, num_bytes;
+    u32 w, h, c, num_bytes;
 
     memset(bmp_file_header, 0, sizeof(bmp_file_header));
     memset(bmp_info_header, 0, sizeof(bmp_info_header));
@@ -112,6 +114,7 @@ LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, 
 
     w = (bmp_info_header[4] + (bmp_info_header[5] << 8) + (bmp_info_header[6] << 16) + (bmp_info_header[7] << 24));
     h = (bmp_info_header[8] + (bmp_info_header[9] << 8) + (bmp_info_header[10] << 16) + (bmp_info_header[11] << 24));
+    c = bmp_info_header[14] / 8;
 
     num_bytes = ((w * LOADBMP_RGB + 3) & ~0x03) * h;
 
@@ -119,29 +122,35 @@ LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, 
     fread(bmp_img.data(), 1, num_bytes, f);
     fclose(f);
 
-    u8 *buffer = reinterpret_cast<u8 *>(tex->data);
-    u32 buffer_width = tex->width;
+    return callback(w, h, c, bmp_img.data());
+}
 
-    height = std::min(h, height);
-    width = std::min(w, width);
-    stride = stride ? stride : 1;
+LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, u32 img_stride) {
+    return loadbmp(filename, [tex, img_stride](unsigned int w, unsigned int h, unsigned int c, char *data) {
+        u8 *buffer = reinterpret_cast<u8 *>(tex->data);
+        u32 buffer_width = tex->width;
 
-    for (u32 y = 0; y < height; y++) {
-        for (u32 x = 0; x < width; x++) {
-            u32 dst_pos = ((((y >> 3) * (buffer_width >> 3) + (x >> 3)) << 6) +
-                           ((x & 1) | ((y & 1) << 1) | ((x & 2) << 1) | ((y & 2) << 2) | ((x & 4) << 2) | ((y & 4) << 3))) *
-                          LOADBMP_RGB;
-            u32 src_pos = (((h - 1) - y * stride) * w + x * stride) * LOADBMP_RGB;
+        u32 height = std::min(static_cast<u16>(h), tex->height);
+        u32 width = std::min(static_cast<u16>(w), tex->width);
+        u32 stride = img_stride ? img_stride : 1;
 
-            buffer[dst_pos] = bmp_img[src_pos];
-            buffer[dst_pos + 1] = bmp_img[src_pos + 1];
-            buffer[dst_pos + 2] = bmp_img[src_pos + 2];
+        for (u32 y = 0; y < height; y++) {
+            for (u32 x = 0; x < width; x++) {
+                u32 dst_pos = ((((y >> 3) * (buffer_width >> 3) + (x >> 3)) << 6) +
+                               ((x & 1) | ((y & 1) << 1) | ((x & 2) << 1) | ((y & 2) << 2) | ((x & 4) << 2) | ((y & 4) << 3))) *
+                              LOADBMP_RGB;
+                u32 src_pos = (((h - 1) - y * stride) * w + x * stride) * LOADBMP_RGB;
+
+                buffer[dst_pos] = data[src_pos];
+                buffer[dst_pos + 1] = data[src_pos + 1];
+                buffer[dst_pos + 2] = data[src_pos + 2];
+            }
         }
-    }
 
-    C3D_TexFlush(tex);
+        C3D_TexFlush(tex);
 
-    return LOADBMP_NO_ERROR;
+        return LOADBMP_NO_ERROR;
+    });
 }
 
 #endif

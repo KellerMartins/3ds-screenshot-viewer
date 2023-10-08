@@ -81,7 +81,7 @@ C2D_Image CreateImage(u16 width, u16 height) {
 void LoadThumbnail(ScreenshotInfo *info) {
     info->init_thumbnail();
 
-    unsigned int error = loadbmp_to_texture(info->path_top, info->thumbnail.tex, ui::kThumbnailWidth, ui::kThumbnailHeight, ui::kThumbnailDownscale);
+    unsigned int error = loadbmp_to_texture(info->path_top, info->thumbnail.tex, ui::kThumbnailDownscale);
     info->has_thumbnail = !error;
 }
 
@@ -109,7 +109,7 @@ void ThreadLoadScreenshot(void *arg) {
 
             unsigned int error;
             if (screenshots[index].path_top_right.size() > 0) {
-                error = loadbmp_to_texture(screenshots[index].path_top_right, screenshot->top_right.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
+                error = loadbmp_to_texture(screenshots[index].path_top_right, screenshot->top_right.tex);
                 if (error) {
                     screenshot->is_3d = false;
                 } else {
@@ -119,14 +119,14 @@ void ThreadLoadScreenshot(void *arg) {
                 screenshot->is_3d = false;
             }
 
-            error = loadbmp_to_texture(screenshots[index].path_top, screenshot->top.tex, ui::kTopScreenWidth, ui::kTopScreenHeight);
+            error = loadbmp_to_texture(screenshots[index].path_top, screenshot->top.tex);
             if (error) {
                 memset(screenshot->top_right.tex->data, 0, screenshot->top_right.tex->size);
                 memset(screenshot->top.tex->data, 0, screenshot->top.tex->size);
                 screenshot->is_3d = false;
             }
 
-            error = loadbmp_to_texture(screenshots[index].path_bottom, screenshot->bottom.tex, ui::kBottomScreenWidth, ui::kBottomScreenHeight);
+            error = loadbmp_to_texture(screenshots[index].path_bottom, screenshot->bottom.tex);
             if (error) {
                 memset(screenshot->bottom.tex->data, 0, screenshot->bottom.tex->size);
             }
