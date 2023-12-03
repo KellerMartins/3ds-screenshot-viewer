@@ -49,6 +49,8 @@ bool CanRenderTopScreen();
 void ClearTargetScreen(TargetScreen screen, u32 clear_color = C2D_Color32(0x40, 0x40, 0x40, 0xFF));
 void SetTargetScreen(TargetScreen screen);
 
+C2D_Image CreateImage(u16 width, u16 height);
+
 void DrawLine(float x0, float y0, float x1, float y1, float thickness, u32 color);
 void DrawRect(float x, float y, float width, float height, u32 color);
 void DrawOutlineRect(float x, float y, float width, float height, float thickness, u32 color);

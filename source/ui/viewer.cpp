@@ -279,7 +279,7 @@ void Input() {
     }
 
     if (changed_selection) {
-        screenshots::Load(selected_index, OnLoadScreenshot);
+        screenshots::Load(screenshots::GetInfo(selected_index), OnLoadScreenshot);
         changed_selection = false;
         changed_screen = true;
     }
@@ -313,7 +313,7 @@ void DrawInterface() {
                 float scale_y = is_selected_multi ? (kTopScreenHeight + kSelectionOutline * 8) / static_cast<float>(kTopScreenHeight) : 1;
 
                 // Draw screenshot thumbnail
-                C2D_DrawImageAt(screenshot->thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - offset,
+                C2D_DrawImageAt(*screenshot->thumbnail, kHMargin + (kThumbnailWidth + kThumbnailSpacing) * c - offset,
                                 kVMargin + (kThumbnailHeight + kThumbnailSpacing) * r - offset, 0, nullptr, scale_x, scale_y);
             } else {
                 // Draw placeholder rect while loading thumbnails

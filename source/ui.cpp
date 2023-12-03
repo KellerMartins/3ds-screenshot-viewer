@@ -3,6 +3,7 @@
 #include <3ds.h>
 #include <citro2d.h>
 
+#include <bit>
 #include <cstring>
 #include <iostream>
 #include <loadbmp.hpp>
@@ -116,6 +117,29 @@ void ClearTargetScreen(TargetScreen screen, u32 clear_color) {
             C2D_TargetClear(bottom_target, clear_color);
             break;
     }
+}
+
+C2D_Image CreateImage(u16 width, u16 height) {
+    C3D_Tex *tex = new C3D_Tex;
+    Tex3DS_SubTexture *subtex = new Tex3DS_SubTexture;
+
+    subtex->width = static_cast<u16>(width);
+    subtex->height = static_cast<u16>(height);
+
+    u16 width_pow2 = std::bit_ceil(subtex->width);
+    u16 height_pow2 = std::bit_ceil(subtex->height);
+
+    subtex->top = 1.0f;
+    subtex->left = 0.0f;
+    subtex->right = subtex->width / static_cast<float>(width_pow2);
+    subtex->bottom = 1.0f - subtex->height / static_cast<float>(height_pow2);
+
+    C3D_TexInit(tex, width_pow2, height_pow2, GPU_RGB8);
+    tex->border = 0xFFFFFFFF;
+    C3D_TexSetWrap(tex, GPU_CLAMP_TO_BORDER, GPU_CLAMP_TO_BORDER);
+    memset(tex->data, 0, tex->size);
+
+    return C2D_Image({tex, subtex});
 }
 
 void DrawLine(float x0, float y0, float x1, float y1, float thickness, u32 color) { C2D_DrawLine(x0, y0, color, x1, y1, color, thickness, 0); }

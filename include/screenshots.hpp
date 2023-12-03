@@ -4,6 +4,7 @@
 #include <3ds.h>
 #include <citro2d.h>
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -28,17 +29,9 @@ struct ScreenshotInfo {
     const std::vector<tags::tag_ptr>& tags;
 
     bool has_thumbnail;
-    C2D_Image thumbnail;
+    C2D_Image* thumbnail;
 
     ScreenshotInfo(std::string name, const std::vector<tags::tag_ptr>& tags);
-    ScreenshotInfo(ScreenshotInfo&& other);
-    ~ScreenshotInfo();
-
-    ScreenshotInfo(const ScreenshotInfo&) = delete;
-    ScreenshotInfo& operator=(const ScreenshotInfo& other) = delete;
-    ScreenshotInfo& operator=(const ScreenshotInfo&& other) = delete;
-
-    void init_thumbnail();
 
     bool has_any_tag(std::set<tags::tag_ptr> tags);
     bool has_all_tag(std::set<tags::tag_ptr> tags);
@@ -55,14 +48,14 @@ enum ScreenshotOrder {
 };
 
 using screenshot_ptr = const Screenshot*;
-using info_ptr = const ScreenshotInfo*;
+using info_ptr = std::shared_ptr<const ScreenshotInfo>;
+using mutable_info_ptr = std::shared_ptr<ScreenshotInfo>;
 
 void Init();
-void Update();
 void Exit();
 
 void Delete(std::set<std::string> screenshot_names);
-void Load(std::size_t index, void (*callback)(screenshot_ptr));
+void Load(info_ptr info, void (*callback)(screenshot_ptr));
 info_ptr GetInfo(std::size_t index);
 
 size_t Count();

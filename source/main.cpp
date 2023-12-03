@@ -17,8 +17,6 @@ int main(int argc, char **argv) {
 
     ui::Start();
     while (aptMainLoop()) {
-        screenshots::Update();
-
         ui::Input();
         if (ui::PressedExit()) break;
 
