@@ -114,11 +114,6 @@ class ScreenshotThread {
             return;
         }
 
-        if (screenshot_info == loading_screenshot_info) {
-            loading_screenshot_callback = callback;
-            return;
-        }
-
         next_screenshot_info = screenshot_info;
         next_screenshot_callback = callback;
 
