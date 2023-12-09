@@ -105,7 +105,7 @@ void Show(bool new_tag, tags::tag_ptr existing_tag, void (*edit_callback)(std::o
     original_tag = existing_tag;
     return_edit_callback = edit_callback;
     return_delete_callback = delete_callback;
-    keyboard_layout = 0;
+
     tab = 0;
 
     if (creating_new_tag) {
@@ -117,6 +117,8 @@ void Show(bool new_tag, tags::tag_ptr existing_tag, void (*edit_callback)(std::o
         edited_tag_index = tags::GetTagIndex(existing_tag);
         original_tag_index = edited_tag_index;
     }
+
+    keyboard_layout = edited_tag.name.length() == 0 ? 0 : 1;
 }
 
 void FinishEditing(bool cancel) {
