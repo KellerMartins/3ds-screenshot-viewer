@@ -85,8 +85,6 @@ LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned in
     u8 bmp_file_header[14];
     u8 bmp_info_header[40];
 
-    thread_local std::vector<char> bmp_img;
-
     u32 w, h, c, num_bytes;
 
     memset(bmp_file_header, 0, sizeof(bmp_file_header));
@@ -118,7 +116,7 @@ LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned in
 
     num_bytes = ((w * LOADBMP_RGB + 3) & ~0x03) * h;
 
-    bmp_img.resize(num_bytes);
+    std::vector<char> bmp_img(num_bytes);
     fread(bmp_img.data(), 1, num_bytes, f);
     fclose(f);
 
