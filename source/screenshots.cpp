@@ -57,7 +57,7 @@ void SearchScreenshots() {
                 name = filename.substr(0, filename.size() - suffixes[s].size());
 
                 if (screenshots.size() == 0 || screenshots.back()->name != name) {
-                    screenshots.push_back(std::shared_ptr<ScreenshotInfo>(new ScreenshotInfo(name, tags::GetScreenshotTags(name))));
+                    screenshots.push_back(new ScreenshotInfo(name, tags::GetScreenshotTags(name)));
                 }
 
                 auto scrs = screenshots.back();
@@ -178,7 +178,14 @@ void Init() {
     thumbnailThread = new threads::ThumbnailThread(screenshots_shown.begin(), screenshots_shown.end());
 }
 
-void Exit() { delete screenshotThread; }
+void Exit() {
+    delete screenshotThread;
+    delete thumbnailThread;
+
+    for (auto &screenshot : screenshots) {
+        delete screenshot;
+    }
+}
 
 void Load(info_ptr info, void (*callback)(screenshot_ptr)) {
     if (screenshotThread) screenshotThread->Load(info, callback);
@@ -250,4 +257,19 @@ bool ScreenshotInfo::has_all_tag(std::set<tags::tag_ptr> tags) {
 }
 
 ScreenshotInfo::ScreenshotInfo(std::string name, const std::vector<tags::tag_ptr> &tags) : name(name), tags(tags), has_thumbnail(false) {}
+
+Screenshot::~Screenshot() {
+    if (top.tex) {
+        C3D_TexDelete(top.tex);
+        delete top.subtex;
+    }
+    if (top_right.tex) {
+        C3D_TexDelete(top_right.tex);
+        delete top_right.subtex;
+    }
+    if (bottom.tex) {
+        C3D_TexDelete(bottom.tex);
+        delete bottom.subtex;
+    }
+}
 }  // namespace screenshots

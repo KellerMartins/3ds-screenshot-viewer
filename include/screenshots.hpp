@@ -17,6 +17,8 @@ struct Screenshot {
     C2D_Image top;
     C2D_Image top_right;
     C2D_Image bottom;
+
+    ~Screenshot();
 };
 
 struct ScreenshotInfo {
@@ -29,7 +31,7 @@ struct ScreenshotInfo {
     const std::vector<tags::tag_ptr>& tags;
 
     bool has_thumbnail;
-    C2D_Image* thumbnail;
+    const C2D_Image* thumbnail;
 
     ScreenshotInfo(std::string name, const std::vector<tags::tag_ptr>& tags);
 
@@ -48,8 +50,8 @@ enum ScreenshotOrder {
 };
 
 using screenshot_ptr = const Screenshot*;
-using info_ptr = std::shared_ptr<const ScreenshotInfo>;
-using mutable_info_ptr = std::shared_ptr<ScreenshotInfo>;
+using info_ptr = const ScreenshotInfo*;
+using mutable_info_ptr = ScreenshotInfo*;
 
 void Init();
 void Exit();

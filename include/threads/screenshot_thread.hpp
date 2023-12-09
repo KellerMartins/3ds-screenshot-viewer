@@ -106,7 +106,13 @@ class ScreenshotThread {
         Start();
     }
 
-    ~ScreenshotThread() { Stop(); }
+    ~ScreenshotThread() {
+        Stop();
+
+        for (auto &screenshot : screenshot_buffer) {
+            delete screenshot;
+        }
+    }
 
     void Load(info_ptr screenshot_info, void (*callback)(screenshot_ptr)) {
         if (screenshot_info == nullptr) {
@@ -124,17 +130,22 @@ class ScreenshotThread {
     void Stop() {
         if (!run_thread) return;
 
+        next_screenshot_info = nullptr;
         run_thread = false;
 
         svcClearEvent(loadScreenshotRequest);
         svcSignalEvent(loadScreenshotRequest);
+
         threadJoin(loadScreenshotThread, U64_MAX);
         threadFree(loadScreenshotThread);
+
         svcCloseHandle(loadScreenshotRequest);
     }
 
     void Start() {
         if (run_thread) return;
+
+        next_screenshot_info = nullptr;
 
         s32 prio = 0;
         svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);

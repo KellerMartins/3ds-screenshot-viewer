@@ -186,10 +186,13 @@ class ThumbnailThread {
         if (!run_thread) return;
 
         run_thread = false;
+
         svcClearEvent(loadThumbnailRequest);
         svcSignalEvent(loadThumbnailRequest);
+
         threadJoin(thumbnailThread, U64_MAX);
         threadFree(thumbnailThread);
+
         svcCloseHandle(loadThumbnailRequest);
     }
 
