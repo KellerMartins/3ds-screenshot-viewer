@@ -23,6 +23,8 @@ int main(int argc, char **argv) {
         ui::Render();
     }
 
+    if (tags::WasModified()) tags::Save();
+
     screenshots::Exit();
     ui::Exit();
 

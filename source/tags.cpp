@@ -22,6 +22,8 @@ std::map<std::string, std::vector<const Tag*>> screenshot_tags;
 std::set<tags::tag_ptr> tags_filter;
 std::set<tags::tag_ptr> hidden_tags;
 
+bool modified = false;
+
 std::string color_to_hex_string(u32 x) {
     std::stringstream stream;
     stream << std::setfill('0') << std::setw(sizeof(u32) * 2) << std::hex << x;
@@ -152,7 +154,7 @@ void Load() {
             }
         }
     } else {
-        Save();
+        modified = true;
     }
 }
 
@@ -199,7 +201,7 @@ void ChangeScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_
         }
     }
 
-    Save();
+    modified = true;
     screenshots::UpdateOrder();
 }
 
@@ -209,14 +211,14 @@ void RemoveScreenshotsTags(std::set<std::string> screenshot_names) {
             screenshot_tags.erase(name);
         }
     }
-    Save();
+    modified = true;
 }
 
 tag_ptr AddTag(Tag new_tag) {
     auto ptr = new Tag(new_tag);
     tags.push_back(ptr);
 
-    Save();
+    modified = true;
 
     return ptr;
 }
@@ -226,7 +228,7 @@ void ReplaceTag(tag_ptr tag, Tag new_tag) {
     if (idx >= 0) {
         *tags[idx] = new_tag;
 
-        Save();
+        modified = true;
     }
 }
 
@@ -239,7 +241,7 @@ void MoveTag(size_t src_idx, size_t dst_idx) {
     tags.erase(tags.begin() + src_idx);
     tags.insert(tags.begin() + dst_idx, t);
 
-    Save();
+    modified = true;
     screenshots::UpdateOrder();
 }
 
@@ -261,7 +263,7 @@ void DeleteTag(tag_ptr tag) {
             hidden_tags.erase(tag);
         }
 
-        Save();
+        modified = true;
         screenshots::UpdateOrder();
     }
 }
@@ -274,7 +276,7 @@ void ChangeTagsFilter(std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_ta
     for (auto tag : added_tags) tags_filter.insert(tag);
     for (auto tag : removed_tags) tags_filter.erase(tag);
 
-    Save();
+    modified = true;
     screenshots::UpdateOrder();
 }
 
@@ -282,7 +284,10 @@ void ChangeHiddenTags(std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_ta
     for (auto tag : added_tags) hidden_tags.insert(tag);
     for (auto tag : removed_tags) hidden_tags.erase(tag);
 
-    Save();
+    modified = true;
     screenshots::UpdateOrder();
 }
+
+bool WasModified() { return modified; }
+
 }  // namespace tags

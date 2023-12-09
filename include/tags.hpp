@@ -27,6 +27,7 @@ const std::set<tags::tag_ptr> GetTagsFilter();
 const std::set<tags::tag_ptr> GetHiddenTags();
 
 size_t Count();
+bool WasModified();
 
 void ChangeScreenshotsTags(std::set<std::string> screenshot_names, std::set<tag_ptr> added_tags, std::set<tag_ptr> removed_tags);
 void RemoveScreenshotsTags(std::set<std::string> screenshot_names);

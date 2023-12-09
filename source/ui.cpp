@@ -64,7 +64,7 @@ void Exit() {
 
 void Input() {
     hidScanInput();
-    if (keysHeld() & KEY_START && envIsHomebrew()) {
+    if (keysHeld() & KEY_START) {
         pressed_exit_button = true;
         return;
     }
