@@ -103,7 +103,7 @@ class ThumbnailThread {
         ThumbnailCache *thumbnail = &thumbnails_cache.back();
 
         info->has_thumbnail = false;
-        unsigned int error = loadbmp_to_texture(info->path_top, thumbnail->image.tex, ui::kThumbnailDownscale);
+        unsigned int error = loadbmp_to_image(info->path_top, thumbnail->image);
         info->thumbnail = &thumbnail->image;
         info->has_thumbnail = !error;
 

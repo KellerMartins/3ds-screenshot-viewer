@@ -1,4 +1,4 @@
-// Code repurposed to load bmp to citro3D texture buffer. Original header below:
+// Code repurposed to load bmp to citro2D image. Original header below:
 
 // Author: Christian Vallentin <vallentin.source@gmail.com>
 // Website: http://vallentin.dev
@@ -60,13 +60,12 @@
 #define LOADBMP_API extern
 #endif
 
-#include <citro3d.h>
+#include <citro2d.h>
 
 #include <functional>
 #include <string>
 
-LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned int(unsigned int, unsigned int, unsigned int, char *)> callback);
-LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, u32 stride = 1);
+LOADBMP_API unsigned int loadbmp_to_image(std::string filename, C2D_Image img);
 
 #ifdef LOADBMP_IMPLEMENTATION
 
@@ -77,7 +76,17 @@ LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, 
 #include <string>
 #include <vector>
 
-LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned int(unsigned int, unsigned int, unsigned int, char *)> callback) {
+struct bmp_buffer {
+    u32 width;
+    u32 height;
+    u32 channels;
+    u32 padding;
+    char *data;
+};
+
+constexpr u32 next_multiple_of_4(u32 x) { return ((x + 3) & ~0x03); }
+
+LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned int(bmp_buffer bmp)> callback) {
     FILE *f = fopen(filename.c_str(), "rb");
 
     if (!f) return LOADBMP_FILE_NOT_FOUND;
@@ -85,7 +94,7 @@ LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned in
     u8 bmp_file_header[14];
     u8 bmp_info_header[40];
 
-    u32 w, h, c, num_bytes;
+    u32 w, h, c, num_bytes, padding;
 
     memset(bmp_file_header, 0, sizeof(bmp_file_header));
     memset(bmp_info_header, 0, sizeof(bmp_info_header));
@@ -114,38 +123,54 @@ LOADBMP_API unsigned int loadbmp(std::string filename, std::function<unsigned in
     h = (bmp_info_header[8] + (bmp_info_header[9] << 8) + (bmp_info_header[10] << 16) + (bmp_info_header[11] << 24));
     c = bmp_info_header[14] / 8;
 
-    num_bytes = ((w * LOADBMP_RGB + 3) & ~0x03) * h;
+    padding = next_multiple_of_4(w * LOADBMP_RGB) - w * LOADBMP_RGB;
+    num_bytes = (w * LOADBMP_RGB + padding) * h;
 
     std::vector<char> bmp_img(num_bytes);
     fread(bmp_img.data(), 1, num_bytes, f);
     fclose(f);
 
-    return callback(w, h, c, bmp_img.data());
+    return callback((bmp_buffer){w, h, c, padding, bmp_img.data()});
 }
 
-LOADBMP_API unsigned int loadbmp_to_texture(std::string filename, C3D_Tex *tex, u32 img_stride) {
-    return loadbmp(filename, [tex, img_stride](unsigned int w, unsigned int h, unsigned int c, char *data) {
-        u8 *buffer = reinterpret_cast<u8 *>(tex->data);
-        u32 buffer_width = tex->width;
+LOADBMP_API unsigned int loadbmp_to_image(std::string filename, C2D_Image img) {
+    return loadbmp(filename, [img](bmp_buffer bmp) {
+        u8 *buffer = reinterpret_cast<u8 *>(img.tex->data);
+        u32 buffer_width = img.tex->width;
 
-        u32 height = std::min(static_cast<u16>(h), tex->height);
-        u32 width = std::min(static_cast<u16>(w), tex->width);
-        u32 stride = img_stride ? img_stride : 1;
+        float stride = std::max(static_cast<float>(bmp.height) / img.subtex->height, static_cast<float>(bmp.width) / img.subtex->width);
+        u16 scaledWidth = static_cast<u16>(bmp.width / stride);
+        u16 scaledHeight = static_cast<u16>(bmp.height / stride);
+
+        u32 width = img.tex->width;
+        u32 height = img.tex->height;
+
+        u32 offset_x = (img.subtex->width - scaledWidth) / 2;
+        u32 offset_y = (img.subtex->height - scaledHeight) / 2;
 
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
                 u32 dst_pos = ((((y >> 3) * (buffer_width >> 3) + (x >> 3)) << 6) +
                                ((x & 1) | ((y & 1) << 1) | ((x & 2) << 1) | ((y & 2) << 2) | ((x & 4) << 2) | ((y & 4) << 3))) *
                               LOADBMP_RGB;
-                u32 src_pos = (((h - 1) - y * stride) * w + x * stride) * LOADBMP_RGB;
 
-                buffer[dst_pos] = data[src_pos];
-                buffer[dst_pos + 1] = data[src_pos + 1];
-                buffer[dst_pos + 2] = data[src_pos + 2];
+                u32 src_x = (x - offset_x) * stride;
+                u32 src_y = (y - offset_y) * stride;
+                u32 src_pos = (src_x * LOADBMP_RGB) + ((bmp.height - 1) - src_y) * (bmp.width * LOADBMP_RGB + bmp.padding);
+
+                if (src_x < 0 || src_y < 0 || src_x >= bmp.width || src_y >= bmp.height) {
+                    buffer[dst_pos] = 0;
+                    buffer[dst_pos + 1] = 0;
+                    buffer[dst_pos + 2] = 0;
+                } else {
+                    buffer[dst_pos] = bmp.data[src_pos];
+                    buffer[dst_pos + 1] = bmp.data[src_pos + 1];
+                    buffer[dst_pos + 2] = bmp.data[src_pos + 2];
+                }
             }
         }
 
-        C3D_TexFlush(tex);
+        C3D_TexFlush(img.tex);
 
         return LOADBMP_NO_ERROR;
     });

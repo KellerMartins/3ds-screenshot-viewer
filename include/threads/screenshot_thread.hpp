@@ -39,7 +39,7 @@ class ScreenshotThread {
 
         unsigned int error;
         if (screenshot_info->path_top_right.size() > 0) {
-            error = loadbmp_to_texture(screenshot_info->path_top_right, screenshot->top_right.tex);
+            error = loadbmp_to_image(screenshot_info->path_top_right, screenshot->top_right);
             if (error) {
                 screenshot->is_3d = false;
             } else {
@@ -49,14 +49,14 @@ class ScreenshotThread {
             screenshot->is_3d = false;
         }
 
-        error = loadbmp_to_texture(screenshot_info->path_top, screenshot->top.tex);
+        error = loadbmp_to_image(screenshot_info->path_top, screenshot->top);
         if (error) {
             memset(screenshot->top_right.tex->data, 0, screenshot->top_right.tex->size);
             memset(screenshot->top.tex->data, 0, screenshot->top.tex->size);
             screenshot->is_3d = false;
         }
 
-        error = loadbmp_to_texture(screenshot_info->path_bottom, screenshot->bottom.tex);
+        error = loadbmp_to_image(screenshot_info->path_bottom, screenshot->bottom);
         if (error) {
             memset(screenshot->bottom.tex->data, 0, screenshot->bottom.tex->size);
         }
