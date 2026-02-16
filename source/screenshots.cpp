@@ -42,7 +42,15 @@ threads::ThumbnailThread *thumbnailThread;
 void SearchScreenshots() {
     auto files = std::vector<std::filesystem::path>();
 
-    for (const auto &entry : std::filesystem::directory_iterator(settings::ScreenshotsPath())) files.push_back(entry.path());
+    std::filesystem::directory_iterator iter;
+    try {
+        iter = std::filesystem::directory_iterator(settings::ScreenshotsPath());
+    } catch (const std::filesystem::filesystem_error &err) {
+        std::cout << "Failed screenshot search: " << err.what() << '\n';
+        return;
+    }
+
+    for (const auto &entry : iter) files.push_back(entry.path());
 
     std::sort(files.begin(), files.end());
 
